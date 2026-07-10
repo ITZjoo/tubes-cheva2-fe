@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  /* Headings, titles, buttons */
+  --font-sans: 'Plus Jakarta Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* Body copy, labels, links */
+  --font-body: 'Urbanist', system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  /* Design tokens approximated from design system reference (Light Theme).
+     Placeholder values — replace with exact hex once Figma tokens are exported. */
+
+  /* Primary */
+  --color-primary: #1e4b7a;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #c7dffb;
+  --color-on-primary-container: #0b3866;
+  --color-primary-fixed: #c7dffb;
+  --color-primary-fixed-dim: #9cc3f0;
+  --color-on-primary-fixed: #06213d;
+  --color-on-primary-fixed-variant: #0b3866;
+
+  /* Secondary */
+  --color-secondary: #0f6650;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #b7efdd;
+  --color-on-secondary-container: #06463a;
+  --color-secondary-fixed: #b7efdd;
+  --color-secondary-fixed-dim: #7fdbbc;
+  --color-on-secondary-fixed: #02201a;
+  --color-on-secondary-fixed-variant: #06463a;
+
+  /* Tertiary */
+  --color-tertiary: #5b3b8c;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #e4d9fa;
+  --color-on-tertiary-container: #3b1e6d;
+  --color-tertiary-fixed: #e4d9fa;
+  --color-tertiary-fixed-dim: #c7adf0;
+  --color-on-tertiary-fixed: #1d0e3b;
+  --color-on-tertiary-fixed-variant: #3b1e6d;
+
+  /* Error */
+  --color-error: #b3261e;
+  --color-on-error: #ffffff;
+  --color-error-container: #f9dedc;
+  --color-on-error-container: #601410;
+
+  /* Success */
+  --color-success: #2e7d32;
+  --color-on-success: #ffffff;
+  --color-success-container: #c8e6c9;
+  --color-on-success-container: #1b5e20;
+
+  /* Warning */
+  --color-warning: #a15c07;
+  --color-on-warning: #ffffff;
+  --color-warning-container: #ffe0b2;
+  --color-on-warning-container: #7a3e00;
+
+  /* Info */
+  --color-info: #2a6db0;
+  --color-on-info: #ffffff;
+  --color-info-container: #d3e4f7;
+  --color-on-info-container: #163a5f;
+
+  /* Accent */
+  --color-accent: #8a6d1d;
+  --color-on-accent: #ffffff;
+  --color-accent-container: #f5e1a4;
+  --color-on-accent-container: #4f3d08;
+
+  /* Surface / Neutral */
+  --color-surface-dim: #dad9dc;
+  --color-surface: #fbf9fa;
+  --color-surface-bright: #fcfafb;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f4f2f3;
+  --color-surface-container: #eeeced;
+  --color-surface-container-high: #e8e6e7;
+  --color-surface-container-highest: #e2e0e1;
+  --color-on-surface: #1c1b1d;
+  --color-on-surface-variant: #49454e;
+  --color-outline: #79767a;
+  --color-outline-variant: #c9c5ca;
+  --color-inverse-surface: #313033;
+  --color-inverse-on-surface: #f4eff4;
+  --color-inverse-primary: #9cc3f0;
+  --color-scrim: #000000;
+  --color-shadow: #000000;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-heading {
+  font-family: var(--font-sans);
+  font-weight: 700;
+}
