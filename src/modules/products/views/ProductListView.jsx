@@ -1,27 +1,20 @@
 import { Link } from 'react-router-dom'
-import DashboardLayout from '../../../components/layout/DashboardLayout'
-import Table from '../../../components/ui/Table'
-import Button from '../../../components/ui/Button'
-
-const columns = [
-  { key: 'name', label: 'Nama Produk' },
-  { key: 'category', label: 'Kategori' },
-  { key: 'price', label: 'Harga' },
-]
+import Typography from '../../../components/ui/Typography'
 
 export default function ProductListView() {
-  // TODO: replace with productService.getProducts()
-  const rows = []
+  // TODO: replace with productService.getProducts() once Table is rebuilt
 
   return (
-    <DashboardLayout activeRoute="/products">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-bold text-on-surface">Produk</h1>
-        <Link to="/products/new">
-          <Button variant="primary">Tambah Produk</Button>
-        </Link>
+    <div className="p-6">
+      <div className="mb-2 flex items-center justify-between">
+        <Typography.H1>Produk</Typography.H1>
+        <Typography.Link as={Link} to="/products/new">
+          Tambah Produk
+        </Typography.Link>
       </div>
-      <Table columns={columns} rows={rows} />
-    </DashboardLayout>
+      <Typography.BodyMd className="text-on-surface-variant">
+        Layout dan Table menunggu di-develop ulang.
+      </Typography.BodyMd>
+    </div>
   )
 }

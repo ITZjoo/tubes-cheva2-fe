@@ -1,21 +1,14 @@
-import DashboardLayout from '../../../components/layout/DashboardLayout'
-import Table from '../../../components/ui/Table'
-
-const columns = [
-  { key: 'id', label: 'ID' },
-  { key: 'customer', label: 'Customer' },
-  { key: 'status', label: 'Status' },
-  { key: 'date', label: 'Tanggal' },
-]
+import Typography from '../../../components/ui/Typography'
 
 export default function OrderListView() {
-  // TODO: replace with orderService.getOrders(); status column should render <Badge status={...} />
-  const rows = []
+  // TODO: replace with orderService.getOrders() once Table is rebuilt
 
   return (
-    <DashboardLayout activeRoute="/orders">
-      <h1 className="font-heading mb-6 text-2xl font-bold text-on-surface">Pesanan</h1>
-      <Table columns={columns} rows={rows} />
-    </DashboardLayout>
+    <div className="p-6">
+      <Typography.H1 className="mb-2">Pesanan</Typography.H1>
+      <Typography.BodyMd className="text-on-surface-variant">
+        Layout dan Table menunggu di-develop ulang.
+      </Typography.BodyMd>
+    </div>
   )
 }

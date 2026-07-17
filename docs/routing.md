@@ -1,20 +1,24 @@
 # Routing
 
-All routes are declared in one place: `src/routes/AppRoutes.jsx`. Every
-view below is a placeholder — it renders a heading and the shared layout,
-with no real data fetching yet.
+All routes are declared in one place: `src/routes/AppRoutes.jsx`.
+
+> **Status:** the feature components each view used to render (`Input`,
+> `Button`, `Table`, `Card`, `Badge`, `StatCard`, `DashboardLayout`) were
+> removed pending a rebuild. Every view below currently renders a plain
+> `Typography.H1` + a placeholder note instead — no forms, no layout shell,
+> no data fetching.
 
 | Path                  | View                 | Layout            | Notes                              |
 | ---------------------- | --------------------- | ------------------- | ------------------------------------ |
 | `/`                    | —                    | —                  | Redirects to `/login`               |
-| `/login`               | `LoginView`           | full-screen        | Email + password, client-side validation |
-| `/register`            | `RegisterView`        | full-screen        | Name/email/password + confirmation  |
-| `/dashboard`           | `DashboardView`       | `DashboardLayout`  | 4 dummy `StatCard`s                 |
-| `/products`            | `ProductListView`     | `DashboardLayout`  | Empty `Table` + "Tambah Produk"     |
-| `/products/new`        | `ProductFormView`     | `DashboardLayout`  | Create mode                          |
-| `/products/:id/edit`   | `ProductFormView`     | `DashboardLayout`  | Edit mode (reads `id` from params)  |
-| `/orders`              | `OrderListView`       | `DashboardLayout`  | Empty `Table` (ID/Customer/Status/Tanggal) |
-| `/orders/:id`          | `OrderDetailView`     | `DashboardLayout`  | Reads `id` from params              |
+| `/login`               | `LoginView`           | full-screen        | Placeholder — form pending rebuild  |
+| `/register`            | `RegisterView`        | full-screen        | Placeholder — form pending rebuild  |
+| `/dashboard`           | `DashboardView`       | none (pending)     | Placeholder — layout/StatCard pending rebuild |
+| `/products`            | `ProductListView`     | none (pending)     | Placeholder — layout/Table pending rebuild |
+| `/products/new`        | `ProductFormView`     | none (pending)     | Create mode; placeholder — layout/Input/Button pending rebuild |
+| `/products/:id/edit`   | `ProductFormView`     | none (pending)     | Edit mode (reads `id` from params); same placeholder |
+| `/orders`              | `OrderListView`       | none (pending)     | Placeholder — layout/Table pending rebuild |
+| `/orders/:id`          | `OrderDetailView`     | none (pending)     | Reads `id` from params; placeholder — layout/Card/Badge pending rebuild |
 
 ## Adding a new route
 

@@ -1,27 +1,17 @@
 import { useParams } from 'react-router-dom'
-import DashboardLayout from '../../../components/layout/DashboardLayout'
-import Card from '../../../components/ui/Card'
-import Badge from '../../../components/ui/Badge'
+import Typography from '../../../components/ui/Typography'
 
 export default function OrderDetailView() {
   const { id } = useParams()
 
-  // TODO: replace with orderService.getOrder(id)
+  // TODO: replace with orderService.getOrder(id) once Card/Badge are rebuilt
 
   return (
-    <DashboardLayout activeRoute="/orders">
-      <h1 className="font-heading mb-6 text-2xl font-bold text-on-surface">
-        Detail Pesanan #{id}
-      </h1>
-      <Card title="Informasi Pesanan">
-        <div className="space-y-2 text-sm text-on-surface">
-          <p>Customer: -</p>
-          <p>
-            Status: <Badge status="pending" />
-          </p>
-          <p>Tanggal: -</p>
-        </div>
-      </Card>
-    </DashboardLayout>
+    <div className="p-6">
+      <Typography.H1 className="mb-2">Detail Pesanan #{id}</Typography.H1>
+      <Typography.BodyMd className="text-on-surface-variant">
+        Layout, Card, dan Badge menunggu di-develop ulang.
+      </Typography.BodyMd>
+    </div>
   )
 }

@@ -1,30 +1,30 @@
 # Component Library (`src/components/ui`)
 
+> **Status:** most feature components (`Button`, `Input`, `Card`, `Badge`,
+> `Table`, `Modal`, `EmptyState`, `StatCard`) and all of `components/layout`
+> (`Sidebar`, `Navbar`, `DashboardLayout`) have been removed and are pending
+> a rebuild. Only the foundation components — `Icon` and `Typography` — are
+> currently implemented. Views that used to render the removed components
+> now show a plain placeholder instead; see
+> [`docs/routing.md`](./routing.md) for the current state per route.
+
 All components below are pure, presentational, and reusable across every
 module. Each one lives in its own folder alongside its story:
 
 ```
-components/ui/Button/
-├── Button.jsx
-├── Button.stories.jsx
-└── index.js          # export { default } from './Button'
+components/ui/Icon/
+├── Icon.jsx
+├── Icon.stories.jsx
+└── index.js          # export { default } from './Icon'
 ```
 
 The `index.js` barrel means other files still import the folder itself —
-`import Button from '../../../components/ui/Button'` — nothing outside the
+`import Icon from '../../../components/ui/Icon'` — nothing outside the
 component's own folder needs to know it's a directory instead of a single
 file. Browse every variant live with `npm run storybook`.
 
 | Component    | Key props                                              | Typical use                          |
 | ------------- | -------------------------------------------------------- | -------------------------------------- |
-| `Button`      | `variant` (primary/secondary/danger), `size`, `disabled`, `onClick` | Every form and action across the app |
-| `Input`       | `label`, `type`, `value`, `onChange`, `error`           | Login, Register, Product form         |
-| `Card`        | `title`, `children`                                     | Dashboard summaries, order detail     |
-| `Badge`       | `status` (pending/diproses/selesai), `color`             | Order list/detail status              |
-| `Table`       | `columns`, `rows`                                        | Product list, order list              |
-| `Modal`       | `isOpen`, `onClose`, `title`, `children`                 | Confirm delete, quick detail view     |
-| `EmptyState`  | `message`, `icon`                                         | Empty tables/lists                    |
-| `StatCard`    | `label`, `value`, `icon`                                  | Dashboard KPI cards                   |
 | `Icon`        | `name`, `size` (20/24/40/48), `filled`                    | Any icon, anywhere (see below)        |
 | `Typography`  | `variant`, `as`                                           | Any text matching the Type Scale (see below) |
 
@@ -57,9 +57,10 @@ import Typography from '../../../components/ui/Typography'
   `variant` prop values.
 - `as` — override the rendered tag (each variant has a sensible default,
   e.g. `h1` variant/`Typography.H1` renders an `<h1>`, `link`/`Typography.Link`
-  renders an `<a>`).
-- Any other prop (`href`, `onClick`, `className`, ...) passes through to
-  the underlying element.
+  renders an `<a>`). Pass a router component (e.g. `as={Link}`) to get
+  client-side navigation with type-scale styling.
+- Any other prop (`href`, `to`, `onClick`, `className`, ...) passes through
+  to the underlying element.
 
 ### `Icon`
 
@@ -88,22 +89,14 @@ import Icon from '../../../components/ui/Icon'
 
 ## `src/components/layout`
 
-Same one-folder-per-component convention applies here.
-
-| Component         | Key props                       | Notes                                    |
-| ------------------ | --------------------------------- | ------------------------------------------ |
-| `Sidebar`          | `menuItems`, `activeRoute`        | Left nav, highlights the active route     |
-| `Navbar`           | `userName`, `onLogout`            | Top bar                                    |
-| `DashboardLayout`  | `children`, `activeRoute`          | Wraps Sidebar + Navbar around a page       |
-
-`DashboardLayout` is what every authenticated view (`DashboardView`,
-`ProductListView`, `OrderDetailView`, etc.) wraps itself in. Auth views
-(`LoginView`, `RegisterView`) render full-screen and skip the layout.
+Currently empty (`.gitkeep` only) — `Sidebar`, `Navbar`, and
+`DashboardLayout` were removed pending a rebuild. When they're added back,
+follow the same one-folder-per-component convention as `components/ui`.
 
 ## Conventions
 
-- **No forms live in `components/`.** A form is a view built from `Input` +
-  `Button`, not a standalone component. If a form needs to be reused
+- **No forms live in `components/`.** A form is a view built from UI
+  primitives, not a standalone component. If a form needs to be reused
   across two views in the same module, promote it to that module's
   `components/` folder — never to `components/ui`.
 - Every new shared component needs a story before it's considered done.

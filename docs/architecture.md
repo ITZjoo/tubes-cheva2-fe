@@ -12,10 +12,10 @@ other during the 6-week build.
 src/
 ├── components/
 │   ├── ui/          # Reusable atoms shared across ALL modules
-│   │   ├── Button/       # Button.jsx + Button.stories.jsx + index.js
-│   │   ├── Input/
+│   │   ├── Icon/         # Icon.jsx + Icon.stories.jsx + index.js
+│   │   ├── Typography/
 │   │   └── ...           # one folder per component
-│   └── layout/       # Sidebar, Navbar, DashboardLayout (shell only, no forms)
+│   └── layout/       # page shell components (currently empty, pending rebuild)
 ├── modules/
 │   ├── auth/
 │   │   ├── views/        # LoginView, RegisterView
@@ -43,11 +43,14 @@ src/
 ## Rules of thumb
 
 - **`components/ui`** only holds things that are truly reusable across every
-  module: Button, Input, Card, Badge, Table, Modal, Sidebar, Navbar,
-  EmptyState, StatCard. Nothing here knows about "products" or "orders".
-- **`components/layout`** is the page shell (Sidebar + Navbar +
-  DashboardLayout). It renders `children`, it never fetches data or owns
-  business logic.
+  module. Currently just `Icon` and `Typography` — the feature components
+  (`Button`, `Input`, `Card`, `Badge`, `Table`, `Modal`, `EmptyState`,
+  `StatCard`) were removed and are pending a rebuild. Nothing here knows
+  about "products" or "orders".
+- **`components/layout`** is meant to hold the page shell (nav, sidebar,
+  authenticated-layout wrapper). It's currently empty — removed pending a
+  rebuild — so views render their own content directly instead of wrapping
+  it in a shared layout.
 - **There is no separate "forms" layer.** A form is just a view, built out
   of `components/ui` primitives — see `ProductFormView.jsx` or
   `LoginView.jsx`. This avoids an extra abstraction layer that a 6-week

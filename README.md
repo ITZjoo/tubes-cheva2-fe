@@ -4,9 +4,11 @@ Web app for **Utama Laundry** (kiloan & satuan laundry UMKM) staff to
 manage products and orders. This is the admin/back-office app — end
 customers are served by a separate mobile app.
 
-> **Status:** scaffold stage. Folder structure, routing, and the reusable
-> component library are in place; none of it is wired to a real API yet.
-> See [What's implemented](#whats-implemented) below.
+> **Status:** scaffold stage. Folder structure and routing are in place;
+> most of the reusable component library was removed and is pending a
+> rebuild (only `Icon` and `Typography` exist right now), and none of it is
+> wired to a real API yet. See [What's implemented](#whats-implemented)
+> below.
 
 ## Tech stack
 
@@ -47,8 +49,8 @@ npm run dev                # http://localhost:5173
 ```
 src/
 ├── components/
-│   ├── ui/          # Reusable, presentational components (Button, Input, Table, ...)
-│   └── layout/       # Sidebar, Navbar, DashboardLayout
+│   ├── ui/          # Reusable, presentational components (Icon, Typography — more pending rebuild)
+│   └── layout/       # page shell components (currently empty, pending rebuild)
 ├── modules/          # One folder per feature: auth, dashboard, products, orders
 │   └── <feature>/
 │       ├── views/       # Pages (what used to be called "pages")
@@ -74,34 +76,34 @@ Full write-up in [`docs/architecture.md`](./docs/architecture.md).
 
 ## Component library
 
-Every shared component in `components/ui` and `components/layout` ships
-with a Storybook story covering its main variants. Run:
+Every shared component in `components/ui` ships with a Storybook story
+covering its main variants. Run:
 
 ```bash
 npm run storybook
 ```
 
-and browse `Button`, `Input`, `Card`, `Badge`, `Table`, `Modal`,
-`EmptyState`, `StatCard`, `Icon`, `Typography`, `Sidebar`, and `Navbar`
-interactively.
+and browse `Icon` and `Typography` interactively. `components/layout` is
+currently empty — pending a rebuild.
 
 ## What's implemented
 
 - ✅ Folder structure (module-based: auth, dashboard, products, orders)
-- ✅ Tailwind CSS v4 with a Material 3–style color token set and Plus
-  Jakarta Sans / Urbanist typography
-- ✅ Full `components/ui` + `components/layout` library with Storybook
-  stories
+- ✅ Tailwind CSS v4 with a Material 3–style color token set and the full
+  Type Scale (Web) typography utilities
+- ✅ `Icon` and `Typography` foundation components with Storybook stories
 - ✅ Routing for all MVP screens (login, register, dashboard, product
   list/form, order list/detail), rendering placeholder content
-- ✅ Client-side form validation on Login/Register/Product form
 - ✅ `AuthContext` and `orderStatus` constants scaffolded
 
 ## What's not implemented yet
 
+- ❌ Feature components (`Button`, `Input`, `Card`, `Badge`, `Table`,
+  `Modal`, `EmptyState`, `StatCard`) and layout shell (`Sidebar`, `Navbar`,
+  `DashboardLayout`) — removed, pending a rebuild
 - ❌ Real API calls — every `services/*.js` function is a stub
 - ❌ Persisted auth / protected routes
-- ❌ Real product and order data (tables render empty states)
+- ❌ Real product and order data
 
 ## Backend
 
