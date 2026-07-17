@@ -2,24 +2,41 @@
 
 ## Typography
 
-Two type families, split by role:
+Two type families, split by role: **Plus Jakarta Sans** for display/heading/
+button roles, **Urbanist** for body/label/link roles. Both are loaded via
+Google Fonts in `src/index.css` and exposed as `--font-sans` / `--font-body`.
 
-| Role                                   | Font              | Where it's applied                       |
-| --------------------------------------- | ----------------- | ----------------------------------------- |
-| Headings, titles, buttons, nav labels   | **Plus Jakarta Sans** | `.font-heading` utility, `h1`–`h4` tags |
-| Body copy, labels, links, inputs        | **Urbanist**       | default `body` font                       |
+Every role in the Type Scale (Web) spec has a matching utility class in
+`src/index.css` — use these instead of one-off `text-*`/`font-*` combos so
+the app stays on-spec:
 
-Both are loaded via Google Fonts in `src/index.css` and exposed as Tailwind
-theme variables:
+| Class               | Font              | Size / line-height | Weight | Letter-spacing | Notes                    |
+| -------------------- | ------------------ | -------------------- | ------ | ---------------- | -------------------------- |
+| `.text-display-lg`  | Plus Jakarta Sans | 48px / 56px          | 700    | -0.01em          | Hero title                 |
+| `.text-display-md`  | Plus Jakarta Sans | 40px / 48px          | 700    | -0.01em          | Hero title                 |
+| `.text-display-sm`  | Plus Jakarta Sans | 36px / 44px          | 700    | -0.01em          | Hero title                 |
+| `.text-h1`          | Plus Jakarta Sans | 32px / 40px          | 700    | -0.01em          | Page title                 |
+| `.text-h2`          | Plus Jakarta Sans | 28px / 36px          | 700    | -0.01em          | Page title                 |
+| `.text-h3`          | Plus Jakarta Sans | 24px / 32px          | 700    | -0.005em         | Section title              |
+| `.text-subtitle`    | Plus Jakarta Sans | 20px / 28px          | 600    | 0                | Card title                 |
+| `.text-body-lg`     | Urbanist          | 16px / 2.4           | 400    | 0                | Body                       |
+| `.text-body-md`     | Urbanist          | 14px / 2.2           | 400    | 0                | Body                       |
+| `.text-body-sm`     | Urbanist          | 12px / 1.8           | 500    | 0                | Body                       |
+| `.text-label-lg`    | Urbanist          | 16px / 2.4           | 600    | 0                | Label                      |
+| `.text-label-md`    | Urbanist          | 14px / 2.0           | 500    | 0                | Label                      |
+| `.text-label-sm`    | Urbanist          | 12px / 1.8           | 500    | 0                | Label                      |
+| `.text-pretitle`    | Urbanist          | 16px / 1             | 700    | 0.03em           | Uppercase                  |
+| `.text-button`      | Plus Jakarta Sans | 16px / 1             | 600    | 0.04em           | Uppercase                  |
+| `.text-link`        | Urbanist          | 18px / 1             | 700    | 0                | Underlined, `--color-link` |
+| `.text-link-lg`     | Urbanist          | 24px / 1             | 700    | 0                | Underlined, `--color-link` |
 
-```css
---font-sans: 'Plus Jakarta Sans', ...;   /* utility: font-heading */
---font-body: 'Urbanist', ...;             /* default body font */
-```
+`--color-link` (`#4B4DED`) is a separate token from `--color-primary` — the
+type-scale spec defines its own link color rather than reusing the M3
+primary, so it's kept distinct instead of forced to match.
 
-Use the `font-heading` class whenever a piece of UI (a card title, a button
-label, a page heading) should read as Plus Jakarta Sans instead of the
-default body font.
+The `font-heading` class (Plus Jakarta Sans, weight 700, no fixed size) still
+exists for one-off cases that don't match a named role exactly; prefer a
+`.text-*` class above when the role does match.
 
 ## Color tokens
 
