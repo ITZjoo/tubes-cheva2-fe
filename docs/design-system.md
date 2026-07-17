@@ -110,6 +110,13 @@ as regular Tailwind utilities (`bg-primary`, `text-on-primary-container`,
   reach for the semantic token instead so a future palette swap is a
   one-file change.
 
+## Iconography
+
+Icons come from **Material Symbols** (Outline + Fill, sizes 20/24/40/48),
+matching the design's Iconography spec. There's a single `Icon` component
+(`components/ui/Icon`) instead of one file per icon — see
+[`docs/components.md`](./components.md#icon) for the API.
+
 ## Component reference
 
 See [`docs/components.md`](./components.md) for the full `components/ui`

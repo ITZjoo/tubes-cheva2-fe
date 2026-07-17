@@ -82,7 +82,7 @@ npm run storybook
 ```
 
 and browse `Button`, `Input`, `Card`, `Badge`, `Table`, `Modal`,
-`EmptyState`, `StatCard`, `Sidebar`, and `Navbar` interactively.
+`EmptyState`, `StatCard`, `Icon`, `Sidebar`, and `Navbar` interactively.
 
 ## What's implemented
 
