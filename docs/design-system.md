@@ -29,23 +29,74 @@ pair. All tokens live in `src/index.css` under `@theme` and are consumed
 as regular Tailwind utilities (`bg-primary`, `text-on-primary-container`,
 `border-outline-variant`, etc.).
 
-> **These hex values are placeholders**, approximated from the design
-> reference during scaffolding. Swap them for exact tokens once they're
-> exported from Figma — the variable names are already final, so no
-> component code should need to change.
+> Hex values below are taken directly from the project's design token
+> reference (`Color_Tokens_Kelompok2_Cheva`, Light Theme). `scrim` is not
+> defined separately in that doc and is set to `#000000`, matching the
+> standard Material 3 default (same as `shadow`).
 
-| Group      | Tokens                                                                 |
-| ---------- | ------------------------------------------------------------------------ |
-| Primary    | `primary`, `on-primary`, `primary-container`, `on-primary-container`, `primary-fixed`, `primary-fixed-dim`, `on-primary-fixed`, `on-primary-fixed-variant` |
-| Secondary  | same pattern as Primary                                                  |
-| Tertiary   | same pattern as Primary                                                  |
-| Error      | `error`, `on-error`, `error-container`, `on-error-container`             |
-| Success    | `success`, `on-success`, `success-container`, `on-success-container`     |
-| Warning    | `warning`, `on-warning`, `warning-container`, `on-warning-container`     |
-| Info       | `info`, `on-info`, `info-container`, `on-info-container`                 |
-| Accent     | `accent`, `on-accent`, `accent-container`, `on-accent-container`         |
-| Surface    | `surface-dim`, `surface`, `surface-bright`, `surface-container-lowest/low/(none)/high/highest`, `on-surface`, `on-surface-variant` |
-| Neutral    | `outline`, `outline-variant`, `inverse-surface`, `inverse-on-surface`, `inverse-primary`, `scrim`, `shadow` |
+| Group     | Token                       | Hex       |
+| --------- | --------------------------- | --------- |
+| Primary   | `primary`                   | `#0A6780` |
+|           | `on-primary`                 | `#FFFFFF` |
+|           | `primary-container`          | `#B9EAFF` |
+|           | `on-primary-container`       | `#004D62` |
+|           | `primary-fixed`              | `#B9EAFF` |
+|           | `primary-fixed-dim`          | `#89D0ED` |
+|           | `on-primary-fixed`           | `#001F29` |
+|           | `on-primary-fixed-variant`   | `#004D62` |
+| Secondary | `secondary`                  | `#006A61` |
+|           | `on-secondary`               | `#FFFFFF` |
+|           | `secondary-container`        | `#9EF2E5` |
+|           | `on-secondary-container`     | `#004D62` |
+|           | `secondary-fixed`            | `#9EF2E5` |
+|           | `secondary-fixed-dim`        | `#82D5C9` |
+|           | `on-secondary-fixed`         | `#00201D` |
+|           | `on-secondary-fixed-variant` | `#005049` |
+| Tertiary  | `tertiary`                   | `#66558F` |
+|           | `on-tertiary`                | `#FFFFFF` |
+|           | `tertiary-container`         | `#E9DDFF` |
+|           | `on-tertiary-container`      | `#4D3D75` |
+|           | `tertiary-fixed`             | `#E9DDFF` |
+|           | `tertiary-fixed-dim`         | `#BCA7E2` |
+|           | `on-tertiary-fixed`          | `#210F47` |
+|           | `on-tertiary-fixed-variant`  | `#4D3D75` |
+| Error     | `error`                      | `#904A42` |
+|           | `on-error`                   | `#FFFFFF` |
+|           | `error-container`            | `#FFDAD5` |
+|           | `on-error-container`         | `#73342C` |
+| Success   | `success`                    | `#2D6A44` |
+|           | `on-success`                 | `#FFFFFF` |
+|           | `success-container`          | `#B1F1C2` |
+|           | `on-success-container`       | `#11512E` |
+| Warning   | `warning`                    | `#87521A` |
+|           | `on-warning`                 | `#FFFFFF` |
+|           | `warning-container`          | `#FFDCC0` |
+|           | `on-warning-container`       | `#6A3B02` |
+| Info      | `info`                       | `#3D5F90` |
+|           | `on-info`                    | `#FFFFFF` |
+|           | `info-container`             | `#D5E3FF` |
+|           | `on-info-container`          | `#224876` |
+| Accent    | `accent`                     | `#79590C` |
+|           | `on-accent`                  | `#FFFFFF` |
+|           | `accent-container`           | `#FFDEA4` |
+|           | `on-accent-container`        | `#5D4200` |
+| Surface   | `surface-dim`                | `#D5DBDC` |
+|           | `surface`                    | `#F5FAFC` |
+|           | `surface-bright`             | `#F5FAFC` |
+|           | `surface-container-lowest`   | `#FFFFFF` |
+|           | `surface-container-low`      | `#EFF5F6` |
+|           | `surface-container`          | `#E9EFF0` |
+|           | `surface-container-high`     | `#E3E9EA` |
+|           | `surface-container-highest`  | `#DEE3E5` |
+|           | `on-surface`                 | `#171D1E` |
+|           | `on-surface-variant`         | `#40484B` |
+| Neutral   | `outline`                    | `#70787C` |
+|           | `outline-variant`            | `#BFC8CC` |
+|           | `inverse-surface`            | `#2B3133` |
+|           | `inverse-on-surface`         | `#ECF2F3` |
+|           | `inverse-primary`            | `#89D0ED` |
+|           | `scrim`                      | `#000000` |
+|           | `shadow`                     | `#000000` |
 
 ### Usage guidance
 
