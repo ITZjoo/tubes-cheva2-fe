@@ -26,6 +26,40 @@ file. Browse every variant live with `npm run storybook`.
 | `EmptyState`  | `message`, `icon`                                         | Empty tables/lists                    |
 | `StatCard`    | `label`, `value`, `icon`                                  | Dashboard KPI cards                   |
 | `Icon`        | `name`, `size` (20/24/40/48), `filled`                    | Any icon, anywhere (see below)        |
+| `Typography`  | `variant`, `as`                                           | Any text matching the Type Scale (see below) |
+
+### `Typography`
+
+Wraps the [Type Scale (Web)](./design-system.md#typography) utility classes
+from `src/index.css` so components don't have to remember class names. Two
+equivalent ways to use it — pick whichever reads better at the call site:
+
+```jsx
+import Typography from '../../../components/ui/Typography'
+
+// 1. variant prop — handy when the variant is dynamic/data-driven
+<Typography variant="h1">Utama Laundry</Typography>
+<Typography variant="link" href="/login">Masuk</Typography>
+
+// 2. compound API — no string to type or typo, autocompletes in the editor
+<Typography.H1>Utama Laundry</Typography.H1>
+<Typography.Link href="/login">Masuk</Typography.Link>
+```
+
+- `variant` — one of `display-lg/md/sm`, `h1/h2/h3`, `subtitle`,
+  `body-lg/md/sm`, `label-lg/md/sm`, `pretitle`, `button`, `link`,
+  `link-lg`. Defaults to `body-lg`. The full list is exported as
+  `TYPOGRAPHY_VARIANTS` from `Typography.jsx` — read from it instead of
+  hardcoding the variant names elsewhere (Storybook does this).
+- `Typography.H1`, `Typography.BodyLg`, `Typography.LabelMd`,
+  `Typography.Link`, etc. — one subcomponent per variant, generated from the
+  same `TYPOGRAPHY_VARIANTS` map, so it can never drift out of sync with the
+  `variant` prop values.
+- `as` — override the rendered tag (each variant has a sensible default,
+  e.g. `h1` variant/`Typography.H1` renders an `<h1>`, `link`/`Typography.Link`
+  renders an `<a>`).
+- Any other prop (`href`, `onClick`, `className`, ...) passes through to
+  the underlying element.
 
 ### `Icon`
 
