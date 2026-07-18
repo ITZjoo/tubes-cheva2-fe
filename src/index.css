@@ -94,7 +94,20 @@
      kept as its own token rather than reused since the source doc defines
      it separately. */
   --color-link: #4b4ded;
+
+  /* Indeterminate loading animation */
+  --animate-indeterminate-travel: indeterminate-travel 1.8s infinite linear;
+
+  @keyframes indeterminate-travel {
+    0% {
+      stroke-dashoffset: 1000;
+    }
+    100% {
+      stroke-dashoffset: 0;
+    }
+  }
 }
+
 
 body {
   margin: 0;
