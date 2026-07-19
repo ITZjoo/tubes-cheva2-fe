@@ -1,20 +1,6 @@
-function PlusIcon({ className = 'h-4 w-4' }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  )
-}
+import Icon from '../Icon'
 
-const STYLE_CLASSES = {
+export const COLOR_STYLES = {
   primary: {
     solid:
       'bg-primary text-on-primary hover:brightness-90 active:bg-primary-container active:text-on-primary-container active:brightness-100',
@@ -35,7 +21,7 @@ const STYLE_CLASSES = {
   },
 }
 
-const DISABLED_CLASSES = {
+export const DISABLED_STYLES = {
   solid:
     'disabled:bg-surface-container-lowest disabled:text-on-surface-variant disabled:border disabled:border-outline-variant disabled:hover:brightness-100 disabled:active:bg-surface-container-lowest disabled:active:text-on-surface-variant',
   outline:
@@ -43,38 +29,10 @@ const DISABLED_CLASSES = {
 }
 
 const SIZE_CLASSES = {
-  sm: {
-    root: 'h-8 gap-1.5 px-3 text-xs',
-    iconOnly: 'h-8 w-8',
-    icon: 'h-3.5 w-3.5',
-  },
-  md: {
-    root: 'h-10 gap-2 px-4 text-sm',
-    iconOnly: 'h-10 w-10',
-    icon: 'h-4 w-4',
-  },
-  lg: {
-    root: 'h-11 gap-2 px-5 text-sm',
-    iconOnly: 'h-11 w-11',
-    icon: 'h-4 w-4',
-  },
-  xl: {
-    root: 'h-12 gap-2.5 px-6 text-base',
-    iconOnly: 'h-12 w-12',
-    icon: 'h-5 w-5',
-  },
-}
-
-function resolveAppearance(variant, appearance) {
-  if (variant === 'outline') {
-    return { color: 'primary', style: 'outline' }
-  }
-
-  if (variant === 'outline-secondary') {
-    return { color: 'secondary', style: 'outline' }
-  }
-
-  return { color: variant, style: appearance }
+  sm: { root: 'h-8 gap-1.5 px-3', iconOnly: 'h-8 w-8' },
+  md: { root: 'h-10 gap-2 px-4', iconOnly: 'h-10 w-10' },
+  lg: { root: 'h-11 gap-2 px-5', iconOnly: 'h-11 w-11' },
+  xl: { root: 'h-12 gap-2.5 px-6', iconOnly: 'h-12 w-12' },
 }
 
 export default function Button({
@@ -90,11 +48,8 @@ export default function Button({
   className = '',
   ...rest
 }) {
-  const { color, style } = resolveAppearance(variant, appearance)
-  const palette = STYLE_CLASSES[color] ?? STYLE_CLASSES.primary
+  const palette = COLOR_STYLES[variant] ?? COLOR_STYLES.primary
   const sizeConfig = SIZE_CLASSES[size] ?? SIZE_CLASSES.md
-  const iconSize = sizeConfig.icon
-  const resolvedIcon = startIcon ?? (iconOnly ? <PlusIcon className={iconSize} /> : null)
 
   const shapeClasses = iconOnly
     ? `${sizeConfig.iconOnly} shrink-0 justify-center rounded-full p-0`
@@ -106,19 +61,19 @@ export default function Button({
       disabled={disabled}
       onClick={onClick}
       className={[
-        'font-heading inline-flex items-center justify-center font-semibold transition-colors duration-200',
+        'text-button inline-flex items-center justify-center transition-colors duration-200',
         'disabled:cursor-not-allowed disabled:opacity-100',
         shapeClasses,
-        palette[style],
-        DISABLED_CLASSES[style],
+        palette[appearance] ?? palette.solid,
+        DISABLED_STYLES[appearance] ?? DISABLED_STYLES.solid,
         className,
       ]
         .filter(Boolean)
         .join(' ')}
       {...rest}
     >
-      {resolvedIcon && (
-        <span className="inline-flex shrink-0 items-center justify-center">{resolvedIcon}</span>
+      {startIcon && (
+        <span className="inline-flex shrink-0 items-center justify-center">{startIcon}</span>
       )}
       {!iconOnly && children}
     </button>
