@@ -1,55 +1,5 @@
-import { useId, useState } from 'react'
-
-function SearchIcon({ className = 'h-4 w-4' }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" />
-    </svg>
-  )
-}
-
-function ClearIcon({ className = 'h-4 w-4' }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="m9 9 6 6M15 9l-6 6" />
-    </svg>
-  )
-}
-
-function ErrorIcon({ className = 'h-4 w-4' }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 8v5M12 16h.01" />
-    </svg>
-  )
-}
+import { forwardRef, useId, useState } from 'react'
+import Icon from '../Icon'
 
 const VARIANT_FIELD_CLASSES = {
   filled: {
@@ -75,29 +25,39 @@ function getFieldState({ disabled, error, isFocused }) {
   return 'normal'
 }
 
-export default function Input({
-  label,
-  type = 'text',
-  value,
-  onChange,
-  error,
-  placeholder,
-  helperText,
-  variant = 'filled',
-  floatingLabel = false,
-  startIcon,
-  showClear = false,
-  onClear,
-  disabled = false,
-  id,
-  className = '',
-  ...rest
-}) {
+const Input = forwardRef(function Input(
+  {
+    label,
+    type = 'text',
+    value,
+    onChange,
+    error,
+    placeholder,
+    helperText,
+    variant = 'filled',
+    compactLabel = false,
+    startIcon,
+    showClear = false,
+    onClear,
+    disabled = false,
+    id,
+    className = '',
+    defaultValue,
+    ...rest
+  },
+  ref
+) {
   const generatedId = useId()
   const inputId = id ?? generatedId
   const helperId = `${inputId}-helper`
   const errorId = `${inputId}-error`
   const [isFocused, setIsFocused] = useState(false)
+
+  if (import.meta.env.DEV && defaultValue !== undefined) {
+    console.warn(
+      '[Input] `defaultValue` is not supported on this controlled component — use `value`/`onChange` instead.'
+    )
+  }
 
   const hasValue = value !== undefined && value !== null && String(value).length > 0
   const fieldState = getFieldState({ disabled, error, isFocused })
@@ -111,7 +71,7 @@ export default function Input({
 
   const showTrailingClear = showClear && hasValue && !disabled && !error
   const trailingIcon = error ? (
-    <ErrorIcon className="h-4 w-4 text-error" />
+    <Icon name="error" size={20} filled className="text-error" />
   ) : showTrailingClear ? (
     <button
       type="button"
@@ -119,17 +79,17 @@ export default function Input({
       className="inline-flex text-on-surface-variant transition-colors hover:text-on-surface"
       aria-label="Hapus isian"
     >
-      <ClearIcon className="h-4 w-4" />
+      <Icon name="close" size={20} />
     </button>
   ) : null
 
   const fieldClasses = [
     palette.base,
     palette[fieldState],
-    'w-full text-sm outline-none transition-colors duration-200',
+    'w-full text-body-md outline-none transition-colors duration-200',
     startIcon ? 'pl-10' : '',
     trailingIcon ? 'pr-10' : '',
-    floatingLabel ? 'pt-5 pb-2' : '',
+    compactLabel ? 'pt-5 pb-2' : '',
     className,
   ]
     .filter(Boolean)
@@ -141,17 +101,17 @@ export default function Input({
 
   return (
     <div className="block text-left">
-      {!floatingLabel && label && (
-        <label htmlFor={inputId} className={`mb-1 block text-xs font-medium ${labelColor}`}>
+      {!compactLabel && label && (
+        <label htmlFor={inputId} className={`mb-1 block text-label-sm ${labelColor}`}>
           {label}
         </label>
       )}
 
       <div className="relative">
-        {floatingLabel && label && (
+        {compactLabel && label && (
           <label
             htmlFor={inputId}
-            className={`pointer-events-none absolute left-3 top-2 text-xs font-medium transition-colors ${labelColor}`}
+            className={`pointer-events-none absolute left-3 top-2 text-label-sm transition-colors ${labelColor}`}
           >
             {label}
           </label>
@@ -164,6 +124,7 @@ export default function Input({
         )}
 
         <input
+          ref={ref}
           id={inputId}
           type={type}
           value={value}
@@ -186,13 +147,13 @@ export default function Input({
       {(helperText || error) && (
         <p
           id={error ? errorId : helperId}
-          className={`mt-1 text-xs ${error ? 'text-error' : 'text-on-surface-variant'}`}
+          className={`mt-1 text-body-sm ${error ? 'text-error' : 'text-on-surface-variant'}`}
         >
           {error || helperText}
         </p>
       )}
     </div>
   )
-}
+})
 
-export { SearchIcon, ClearIcon, ErrorIcon }
+export default Input

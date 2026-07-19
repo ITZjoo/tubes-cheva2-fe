@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import Input, { SearchIcon } from './Input'
+import Input from './Input'
+import Icon from '../Icon'
 
 export default {
   title: 'UI/Input',
@@ -7,7 +8,7 @@ export default {
   tags: ['autodocs'],
   argTypes: {
     variant: { control: 'select', options: ['filled', 'outlined'] },
-    floatingLabel: { control: 'boolean' },
+    compactLabel: { control: 'boolean' },
   },
 }
 
@@ -36,7 +37,7 @@ export const FilledWithSearchIcon = {
     placeholder: 'Placeholder',
     helperText: 'Supporting text',
     variant: 'filled',
-    startIcon: <SearchIcon />,
+    startIcon: <Icon name="search" size={20} />,
   },
 }
 
@@ -49,13 +50,13 @@ export const OutlinedDefault = {
   },
 }
 
-export const OutlinedFloatingLabel = {
+export const OutlinedCompactLabel = {
   args: {
     label: 'Label',
     placeholder: 'Placeholder',
     helperText: 'Supporting text',
     variant: 'outlined',
-    floatingLabel: true,
+    compactLabel: true,
   },
 }
 
@@ -89,7 +90,7 @@ export const Interactive = {
         onChange={(event) => setValue(event.target.value)}
         helperText="Supporting text"
         variant="filled"
-        startIcon={<SearchIcon />}
+        startIcon={<Icon name="search" size={20} />}
         showClear
         onClear={() => setValue('')}
       />
@@ -106,7 +107,7 @@ export const StateMatrix = {
         placeholder="Placeholder"
         helperText="Supporting text"
         variant="filled"
-        startIcon={<SearchIcon />}
+        startIcon={<Icon name="search" size={20} />}
       />
       <Input label="Label" value="Input" helperText="Supporting text" variant="outlined" />
       <Input
@@ -114,7 +115,7 @@ export const StateMatrix = {
         value="Input"
         error="Supporting text"
         variant="outlined"
-        floatingLabel
+        compactLabel
       />
     </div>
   ),
