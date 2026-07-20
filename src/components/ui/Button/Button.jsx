@@ -44,6 +44,7 @@ export default function Button({
   type = 'button',
   startIcon,
   iconOnly = false,
+  uppercase = false,
   onClick,
   className = '',
   ...rest
@@ -62,6 +63,7 @@ export default function Button({
       onClick={onClick}
       className={[
         'text-button inline-flex items-center justify-center transition-colors duration-200',
+        uppercase && 'uppercase',
         'disabled:cursor-not-allowed disabled:opacity-100',
         shapeClasses,
         palette[appearance] ?? palette.solid,

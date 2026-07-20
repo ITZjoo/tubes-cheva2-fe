@@ -10,6 +10,7 @@ export default {
     appearance: { control: 'select', options: ['solid', 'outline'] },
     size: { control: 'select', options: ['sm', 'md', 'lg', 'xl'] },
     iconOnly: { control: 'boolean' },
+    uppercase: { control: 'boolean' },
   },
 }
 
