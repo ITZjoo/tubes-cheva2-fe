@@ -1,21 +1,21 @@
 import { forwardRef, useId, useState } from 'react'
 import Icon from '../Icon'
 
-const VARIANT_FIELD_CLASSES = {
-  filled: {
-    base: 'rounded-md border-0 border-b bg-surface-container-low px-3 py-2.5',
-    normal: 'border-outline-variant text-on-surface',
-    focus: 'border-b-2 border-b-primary',
-    error: 'border-b-2 border-b-error bg-error-container text-on-error-container',
-    disabled: 'bg-surface-container text-on-surface-variant',
-  },
-  outlined: {
-    base: 'rounded-md border bg-surface-container-lowest px-3 py-2.5',
-    normal: 'border-outline-variant text-on-surface',
-    focus: 'border-2 border-primary',
-    error: 'border-2 border-error bg-error-container text-on-error-container',
-    disabled: 'border-outline-variant bg-surface-container text-on-surface-variant',
-  },
+const FILLED_BASE = 'rounded-t-md rounded-b-none border-0 border-b px-3 py-2.5'
+const FILLED_STATE = {
+  normal: 'border-outline-variant bg-surface-container-low text-on-surface',
+  focus: 'border-b-2 border-b-primary bg-surface-container-low text-on-surface',
+  error: 'border-b-2 border-b-error bg-error-container text-on-error-container',
+  disabled: 'bg-surface-container text-on-surface-variant',
+}
+
+const OUTLINED_BASE =
+  'm-0 flex items-center gap-2 rounded-lg border border-solid px-3 pb-2.5 pt-0 transition-colors duration-200'
+const OUTLINED_STATE = {
+  normal: 'border-outline-variant bg-surface-container-lowest text-on-surface',
+  focus: 'border-2 border-primary bg-surface-container-lowest text-on-surface',
+  error: 'border-2 border-error bg-error-container text-on-error-container',
+  disabled: 'border-outline-variant bg-surface-container text-on-surface-variant',
 }
 
 function getFieldState({ disabled, error, isFocused }) {
@@ -51,6 +51,7 @@ const Input = forwardRef(function Input(
   const inputId = id ?? generatedId
   const helperId = `${inputId}-helper`
   const errorId = `${inputId}-error`
+  const legendId = `${inputId}-legend`
   const [isFocused, setIsFocused] = useState(false)
 
   if (import.meta.env.DEV && defaultValue !== undefined) {
@@ -61,88 +62,95 @@ const Input = forwardRef(function Input(
 
   const hasValue = value !== undefined && value !== null && String(value).length > 0
   const fieldState = getFieldState({ disabled, error, isFocused })
-  const palette = VARIANT_FIELD_CLASSES[variant] ?? VARIANT_FIELD_CLASSES.filled
 
-  const labelColor = error
-    ? 'text-error'
-    : isFocused
-      ? 'text-primary'
-      : 'text-on-surface-variant'
+  const labelColor = error ? 'text-error' : isFocused ? 'text-primary' : 'text-on-surface-variant'
 
   const showTrailingClear = showClear && hasValue && !disabled && !error
   const trailingIcon = error ? (
-    <Icon name="error" size={20} filled className="text-error" />
+    <Icon name="error" size={20} filled className="shrink-0 text-error" />
   ) : showTrailingClear ? (
     <button
       type="button"
       onClick={onClear}
-      className="inline-flex text-on-surface-variant transition-colors hover:text-on-surface"
+      className="inline-flex shrink-0 text-on-surface-variant transition-colors hover:text-on-surface"
       aria-label="Hapus isian"
     >
       <Icon name="close" size={20} />
     </button>
   ) : null
 
-  const fieldClasses = [
-    palette.base,
-    palette[fieldState],
-    'w-full text-body-md outline-none transition-colors duration-200',
-    startIcon ? 'pl-10' : '',
-    trailingIcon ? 'pr-10' : '',
-    compactLabel ? 'pt-5 pb-2' : '',
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ')
+  const describedBy = [helperText ? helperId : null, error ? errorId : null].filter(Boolean).join(' ')
 
-  const describedBy = [helperText ? helperId : null, error ? errorId : null]
-    .filter(Boolean)
-    .join(' ')
+  const inputEl = (
+    <input
+      ref={ref}
+      id={inputId}
+      type={type}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      disabled={disabled}
+      aria-invalid={Boolean(error)}
+      aria-describedby={describedBy || undefined}
+      aria-labelledby={variant === 'outlined' && label ? legendId : undefined}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      className="min-w-0 flex-1 bg-transparent text-body-md outline-none placeholder:text-on-surface-variant disabled:cursor-not-allowed"
+      {...rest}
+    />
+  )
 
   return (
     <div className="block text-left">
-      {!compactLabel && label && (
-        <label htmlFor={inputId} className={`mb-1 block text-label-sm ${labelColor}`}>
-          {label}
-        </label>
-      )}
-
-      <div className="relative">
-        {compactLabel && label && (
-          <label
-            htmlFor={inputId}
-            className={`pointer-events-none absolute left-3 top-2 text-label-sm transition-colors ${labelColor}`}
-          >
-            {label}
-          </label>
-        )}
-
-        {startIcon && (
-          <span className="pointer-events-none absolute left-3 top-1/2 inline-flex -translate-y-1/2 text-on-surface-variant">
-            {startIcon}
-          </span>
-        )}
-
-        <input
-          ref={ref}
-          id={inputId}
-          type={type}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
+      {variant === 'outlined' ? (
+        <fieldset
           disabled={disabled}
-          aria-invalid={Boolean(error)}
-          aria-describedby={describedBy || undefined}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          className={fieldClasses}
-          {...rest}
-        />
+          className={[OUTLINED_BASE, OUTLINED_STATE[fieldState], className].filter(Boolean).join(' ')}
+        >
+          {label && (
+            <legend className="px-1">
+              <span id={legendId} className={`text-label-sm ${labelColor}`}>
+                {label}
+              </span>
+            </legend>
+          )}
+          {startIcon && <span className="shrink-0 text-on-surface-variant">{startIcon}</span>}
+          {inputEl}
+          {trailingIcon}
+        </fieldset>
+      ) : (
+        <>
+          {!compactLabel && label && (
+            <label htmlFor={inputId} className={`mb-1 block text-label-sm ${labelColor}`}>
+              {label}
+            </label>
+          )}
 
-        {trailingIcon && (
-          <span className="absolute right-3 top-1/2 inline-flex -translate-y-1/2">{trailingIcon}</span>
-        )}
-      </div>
+          <div
+            className={[
+              'relative flex items-center gap-2',
+              FILLED_BASE,
+              FILLED_STATE[fieldState],
+              compactLabel ? 'pt-5 pb-2' : '',
+              className,
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {compactLabel && label && (
+              <label
+                htmlFor={inputId}
+                className={`pointer-events-none absolute left-3 top-2 text-label-sm transition-colors ${labelColor}`}
+              >
+                {label}
+              </label>
+            )}
+            {startIcon && <span className="shrink-0 text-on-surface-variant">{startIcon}</span>}
+            {inputEl}
+            {trailingIcon}
+          </div>
+        </>
+      )}
 
       {(helperText || error) && (
         <p
