@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import Icon from '../Icon'
 
 // SVG Logo kustom dengan desain premium bertema Laundry/Washing
@@ -221,12 +221,16 @@ export default function Sidebar({
             </div>
           </div>
           {/* Tombol Chevron Expand */}
-          <Icon
-            name="keyboard_arrow_down"
-            size={20}
-            className="text-on-surface-variant transition-transform duration-300 shrink-0"
+          <span
+            className="transition-transform duration-300 shrink-0 flex items-center justify-center"
             style={{ transform: isProfileOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-          />
+          >
+            <Icon
+              name="keyboard_arrow_down"
+              size={20}
+              className="text-on-surface-variant"
+            />
+          </span>
         </div>
 
         {/* Panel Logout (Bisa diciutkan/dilipat secara mulus) */}
