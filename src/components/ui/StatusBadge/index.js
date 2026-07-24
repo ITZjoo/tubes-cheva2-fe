@@ -1,1 +1,1 @@
-export { default } from './StatusBadge'
+export { default, STATUS_TONES } from './StatusBadge'
