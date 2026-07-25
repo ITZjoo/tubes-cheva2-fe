@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Icon from '../Icon'
 
 // SVG Logo kustom dengan desain premium bertema Laundry/Washing
@@ -109,6 +110,7 @@ export default function Sidebar({
   className = '',
   ...rest
 }) {
+  const navigate = useNavigate()
   // Mode Uncontrolled jika activeItemId tidak disediakan dari luar
   const [localActiveId, setLocalActiveId] = useState(defaultActiveItemId)
   const currentActiveId = activeItemId !== undefined ? activeItemId : localActiveId
@@ -122,6 +124,10 @@ export default function Sidebar({
     }
     if (onItemClick) {
       onItemClick(item)
+    } else {
+      if (item.id === 'dashboard') navigate('/dashboard')
+      else if (item.id === 'pesanan') navigate('/orders')
+      else if (item.id === 'layanan') navigate('/products')
     }
   }
 
