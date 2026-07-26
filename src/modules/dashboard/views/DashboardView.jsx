@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Icon from '../../../components/ui/Icon'
 import Sidebar from '../../../components/ui/Sidebar'
+import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 
 // Data koordinat grafik statis SVG berdasarkan tab waktu (Hari ini, Minggu ini, Bulan ini)
 const CHART_DATA = {
@@ -73,6 +74,8 @@ const getChartPaths = (points) => {
 }
 
 export default function DashboardView() {
+  const handleSidebarNavigate = useSidebarNavigate()
+
   // State untuk melacak status toko (Buka / Tutup)
   const [isShopOpen, setIsShopOpen] = useState(true)
 
@@ -139,7 +142,7 @@ export default function DashboardView() {
   return (
     <div className="flex min-h-screen bg-surface">
       {/* Sidebar di sisi kiri */}
-      <Sidebar activeItemId="dashboard" />
+      <Sidebar activeItemId="dashboard" onItemClick={handleSidebarNavigate} />
 
       {/* Konten Dashboard di sisi kanan */}
       <main className="flex-1 overflow-x-hidden">
