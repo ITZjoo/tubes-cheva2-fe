@@ -5,11 +5,13 @@ import Sidebar from '../../../components/ui/Sidebar'
 import Typography from '../../../components/ui/Typography'
 import Button from '../../../components/ui/Button'
 import Input from '../../../components/ui/Input'
+import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import * as productService from '../services/productService'
 
 export default function ProductFormView() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const handleSidebarNavigate = useSidebarNavigate()
   const isEdit = Boolean(id)
 
   const [form, setForm] = useState({
@@ -42,7 +44,8 @@ export default function ProductFormView() {
             setError('Layanan tidak ditemukan')
           }
         } catch (err) {
-          setError('Gagal memuat data layanan')
+          console.error('Gagal memuat data layanan:', err)
+          setError(`Gagal memuat data layanan. Detail: ${err.message || err}`)
         } finally {
           setLoading(false)
         }
@@ -71,7 +74,8 @@ export default function ProductFormView() {
       }
       navigate('/products')
     } catch (err) {
-      setError('Gagal menyimpan data layanan')
+      console.error('Gagal menyimpan data layanan:', err)
+      setError(`Gagal menyimpan data layanan. Detail: ${err.message || err}`)
     } finally {
       setLoading(false)
     }
@@ -80,7 +84,7 @@ export default function ProductFormView() {
   return (
     <div className="flex min-h-screen bg-surface">
       {/* Sidebar Navigation */}
-      <Sidebar activeItemId="layanan" />
+      <Sidebar activeItemId="layanan" onItemClick={handleSidebarNavigate} />
 
       {/* Main Content Pane */}
       <main className="flex-1 p-8 font-body max-w-[900px] mx-auto flex flex-col gap-6 text-left">
@@ -101,7 +105,7 @@ export default function ProductFormView() {
         {/* Form Body */}
         {loading && !form.name ? (
           <div className="flex flex-col items-center justify-center min-h-[300px] gap-3">
-            <span className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-[#0a6780] animate-spin"></span>
+            <span className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></span>
             <Typography.BodyMd className="text-on-surface-variant font-semibold">Memuat...</Typography.BodyMd>
           </div>
         ) : error ? (
@@ -128,9 +132,9 @@ export default function ProductFormView() {
                 placeholder="Masukkan Nama Layanan..."
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className={`w-full bg-[#eff5f6] border ${
-                  formErrors.name ? 'border-error' : 'border-[#b9eaff]'
-                } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all`}
+                className={`w-full bg-surface-container-low border ${
+                  formErrors.name ? 'border-error' : 'border-primary-container'
+                } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all`}
               />
               {formErrors.name && <p className="mt-1 text-body-sm text-error">{formErrors.name}</p>}
             </div>
@@ -143,7 +147,7 @@ export default function ProductFormView() {
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows="4"
-                className="w-full bg-[#eff5f6] border border-[#b9eaff] rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all resize-none leading-relaxed"
+                className="w-full bg-surface-container-low border border-primary-container rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all resize-none leading-relaxed"
               />
             </div>
 
@@ -157,9 +161,9 @@ export default function ProductFormView() {
                     placeholder="Masukkan Harga"
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    className={`w-full bg-[#eff5f6] border ${
-                      formErrors.price ? 'border-error' : 'border-[#b9eaff]'
-                    } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all font-sans`}
+                    className={`w-full bg-surface-container-low border ${
+                      formErrors.price ? 'border-error' : 'border-primary-container'
+                    } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all font-sans`}
                   />
                   {formErrors.price && <p className="mt-1 text-body-sm text-error">{formErrors.price}</p>}
                 </div>
@@ -169,10 +173,10 @@ export default function ProductFormView() {
                   <button
                     type="button"
                     onClick={() => setUnitDropdownOpen(!unitDropdownOpen)}
-                    className="w-full h-full bg-[#eff5f6] border border-[#b9eaff] rounded-xl px-4 flex items-center justify-between text-body-md text-[#0a6780] font-semibold cursor-pointer select-none"
+                    className="w-full h-full bg-surface-container-low border border-primary-container rounded-xl px-4 flex items-center justify-between text-body-md text-primary font-semibold cursor-pointer select-none"
                   >
                     <span>/ {form.unit}</span>
-                    <Icon name="arrow_drop_down" size={20} className="text-[#0a6780]" />
+                    <Icon name="arrow_drop_down" size={20} className="text-primary" />
                   </button>
 
                   {unitDropdownOpen && (
@@ -185,8 +189,8 @@ export default function ProductFormView() {
                             setForm({ ...form, unit: u })
                             setUnitDropdownOpen(false)
                           }}
-                          className={`w-full text-left px-4 py-2.5 text-body-md font-semibold hover:bg-[#eff5f6] transition-colors text-on-surface ${
-                            form.unit === u ? 'bg-[#b9eaff]/40 text-[#004d62]' : ''
+                          className={`w-full text-left px-4 py-2.5 text-body-md font-semibold hover:bg-surface-container-low transition-colors text-on-surface ${
+                            form.unit === u ? 'bg-primary-container/40 text-on-primary-container' : ''
                           }`}
                         >
                           / {u}
@@ -202,7 +206,7 @@ export default function ProductFormView() {
             <div className="flex justify-end mt-4">
               <button
                 type="submit"
-                className="bg-[#b9eaff] text-[#004d62] font-bold py-3 px-6 rounded-2xl hover:brightness-95 transition-all cursor-pointer shadow-xs font-sans text-label-md"
+                className="bg-primary-container text-on-primary-container font-bold py-3 px-6 rounded-2xl hover:brightness-95 transition-all cursor-pointer shadow-xs font-sans text-label-md"
               >
                 {isEdit ? 'Simpan Layanan' : 'Tambahkan Layanan'}
               </button>

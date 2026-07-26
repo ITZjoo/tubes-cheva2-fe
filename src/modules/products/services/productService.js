@@ -62,6 +62,12 @@ const DEFAULT_LAYANAN_TAMBAHAN = [
   }
 ]
 
+// Helper to generate a unique ID to avoid collisions on rapid clicks
+function generateUniqueId(prefix) {
+  const randomStr = Math.random().toString(36).substring(2, 9)
+  return `${prefix}-${Date.now()}-${randomStr}`
+}
+
 // Fetchers & Savers
 function getLayananUtamaDB() {
   const data = localStorage.getItem(KEY_UTAMA)
@@ -102,7 +108,7 @@ export async function getSingleLayananUtama(id) {
 export async function createLayananUtama(payload) {
   const db = getLayananUtamaDB()
   const newService = {
-    id: 'utama-' + Date.now(),
+    id: generateUniqueId('utama'),
     name: payload.name,
     description: payload.description || '',
     price: Number(payload.price) || 0,
@@ -149,7 +155,7 @@ export async function getSingleLayananTambahan(id) {
 export async function createLayananTambahanGroup(name) {
   const db = getLayananTambahanDB()
   const newGroup = {
-    id: 'tambahan-' + Date.now(),
+    id: generateUniqueId('tambahan'),
     name: name,
     status: true,
     items: []
@@ -186,7 +192,7 @@ export async function createLayananSpesifik(groupId, payload) {
   const groupTambahan = dbTambahan.find((x) => x.id === groupId)
   if (groupTambahan) {
     const newItem = {
-      id: 'spec-' + Date.now(),
+      id: generateUniqueId('spec'),
       name: payload.name,
       price: Number(payload.price) || 0,
       unit: payload.unit || 'Pcs'
@@ -202,7 +208,7 @@ export async function createLayananSpesifik(groupId, payload) {
   const groupUtama = dbUtama.find((x) => x.id === groupId)
   if (groupUtama) {
     const newItem = {
-      id: 'spec-' + Date.now(),
+      id: generateUniqueId('spec'),
       name: payload.name,
       price: Number(payload.price) || 0,
       unit: payload.unit || 'Pcs'

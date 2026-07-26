@@ -5,9 +5,11 @@ import Sidebar from '../../../components/ui/Sidebar'
 import Typography from '../../../components/ui/Typography'
 import Button from '../../../components/ui/Button'
 import Input from '../../../components/ui/Input'
+import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import * as productService from '../services/productService'
 
 export default function ProductListView() {
+  const handleSidebarNavigate = useSidebarNavigate()
   const [activeTab, setActiveTab] = useState('utama') // 'utama' | 'tambahan'
   
   // Data lists from localStorage DB
@@ -20,6 +22,7 @@ export default function ProductListView() {
   const [activeMenuType, setActiveMenuType] = useState(null) // 'utama' | 'tambahan'
   
   const [activeModal, setActiveModal] = useState(null) // null | 'tambah_utama' | 'edit_utama' | 'tambah_tambahan' | 'edit_tambahan' | 'tambah_spesifik' | 'edit_spesifik'
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // null | { type, id, extraId, message }
   
   // Form payloads
   const [selectedItem, setSelectedItem] = useState(null) // currently editing object
@@ -29,7 +32,7 @@ export default function ProductListView() {
   
   // Form validation errors
   const [errors, setErrors] = useState({})
-
+  
   // Dropdown states for custom selects
   const [unitDropdownOpen, setUnitDropdownOpen] = useState(false)
   const [groupDropdownOpen, setGroupDropdownOpen] = useState(false)
@@ -130,15 +133,12 @@ export default function ProductListView() {
     }
   }
 
-  const handleDeleteUtama = async (id) => {
-    if (window.confirm('Hapus layanan utama ini?')) {
-      try {
-        await productService.deleteLayananUtama(id)
-        await loadData()
-      } catch (err) {
-        console.error(err)
-      }
-    }
+  const handleDeleteUtama = (id) => {
+    setDeleteConfirm({
+      type: 'utama',
+      id,
+      message: 'Apakah Anda yakin ingin menghapus layanan utama ini? Tindakan ini tidak dapat dibatalkan.'
+    })
   }
 
   // 2. Additional Service Group CRUD
@@ -211,15 +211,12 @@ export default function ProductListView() {
     }
   }
 
-  const handleDeleteTambahanGroup = async (id) => {
-    if (window.confirm('Hapus kelompok layanan tambahan ini beserta item di dalamnya?')) {
-      try {
-        await productService.deleteLayananTambahanGroup(id)
-        await loadData()
-      } catch (err) {
-        console.error(err)
-      }
-    }
+  const handleDeleteTambahanGroup = (id) => {
+    setDeleteConfirm({
+      type: 'tambahan',
+      id,
+      message: 'Apakah Anda yakin ingin menghapus kelompok layanan tambahan ini beserta seluruh item spesifik di dalamnya? Tindakan ini tidak dapat dibatalkan.'
+    })
   }
 
   // 3. Specific Pricing Option inside Additional Service CRUD
@@ -292,21 +289,19 @@ export default function ProductListView() {
     }
   }
 
-  const handleDeleteSpesifik = async (groupId, itemId) => {
-    if (window.confirm('Hapus item spesifik ini?')) {
-      try {
-        await productService.deleteLayananSpesifik(groupId, itemId)
-        await loadData()
-      } catch (err) {
-        console.error(err)
-      }
-    }
+  const handleDeleteSpesifik = (groupId, itemId) => {
+    setDeleteConfirm({
+      type: 'spesifik',
+      id: itemId,
+      extraId: groupId,
+      message: 'Apakah Anda yakin ingin menghapus item spesifik ini? Tindakan ini tidak dapat dibatalkan.'
+    })
   }
 
   return (
     <div className="flex min-h-screen bg-surface">
       {/* Left Sidebar */}
-      <Sidebar activeItemId="layanan" />
+      <Sidebar activeItemId="layanan" onItemClick={handleSidebarNavigate} />
 
       {/* Main Container */}
       <main className="flex-1 p-8 font-body max-w-[1400px] mx-auto flex flex-col gap-6 overflow-y-auto">
@@ -336,7 +331,7 @@ export default function ProductListView() {
               onClick={() => setActiveTab('utama')}
               className={`px-8 py-3.5 text-label-lg font-bold transition-all relative border-b-2 -mb-[2px] cursor-pointer ${
                 activeTab === 'utama' 
-                  ? 'text-[#0a6780] border-[#0a6780]' 
+                  ? 'text-primary border-primary' 
                   : 'text-on-surface-variant/50 border-transparent hover:text-on-surface-variant'
               }`}
             >
@@ -346,7 +341,7 @@ export default function ProductListView() {
               onClick={() => setActiveTab('tambahan')}
               className={`px-8 py-3.5 text-label-lg font-bold transition-all relative border-b-2 -mb-[2px] cursor-pointer ${
                 activeTab === 'tambahan' 
-                  ? 'text-[#0a6780] border-[#0a6780]' 
+                  ? 'text-primary border-primary' 
                   : 'text-on-surface-variant/50 border-transparent hover:text-on-surface-variant'
               }`}
             >
@@ -358,7 +353,7 @@ export default function ProductListView() {
           <div className="flex-1 flex flex-col justify-between">
             {loading ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3">
-                <span className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-[#0a6780] animate-spin"></span>
+                <span className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></span>
                 <p className="text-body-md text-on-surface-variant/70 font-semibold">Memuat layanan...</p>
               </div>
             ) : activeTab === 'utama' ? (
@@ -368,7 +363,7 @@ export default function ProductListView() {
                 /* Empty state */
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
                   <div className="mb-6 relative">
-                    <svg viewBox="0 0 200 200" className="w-56 h-56 text-[#0a6780]">
+                    <svg viewBox="0 0 200 200" className="w-56 h-56 text-primary">
                       {/* Stacked drawer boxes illustration */}
                       <rect x="70" y="90" width="70" height="70" fill="#004d62" rx="6" />
                       <circle cx="105" cy="125" r="5" fill="#ffffff" />
@@ -389,7 +384,7 @@ export default function ProductListView() {
                       <circle cx="170" cy="108" r="4.5" fill="#2d6a44" />
                     </svg>
                   </div>
-                  <h2 className="text-xl font-bold text-[#002d39] font-sans mb-1.5">Tambahkan Layanan Dulu!</h2>
+                  <h2 className="text-xl font-bold text-on-surface font-sans mb-1.5">Tambahkan Layanan Dulu!</h2>
                   <p className="text-body-md text-on-surface-variant/70 font-semibold max-w-sm">
                     Silahkan tekan tombol layanan, untuk menambahkan layanan
                   </p>
@@ -407,7 +402,7 @@ export default function ProductListView() {
                       {/* Top Header Row */}
                       <div className="flex items-center justify-between">
                         <div className="flex-1 pr-6 text-left">
-                          <h3 className="text-lg font-bold text-on-surface font-sans flex items-center gap-2">
+                           <h3 className="text-lg font-bold text-on-surface font-sans flex items-center gap-2">
                             {service.name}
                             {!service.status && (
                               <Icon name="visibility_off" size={16} className="text-on-surface-variant/60" />
@@ -420,7 +415,7 @@ export default function ProductListView() {
 
                         {/* Right Panel Alignment */}
                         <div className="flex items-center gap-8">
-                          <span className="text-xl font-bold text-[#0a6780] font-sans">
+                          <span className="text-xl font-bold text-primary font-sans">
                             Rp. {service.price.toLocaleString('id-ID')} <span className="text-body-sm font-medium text-on-surface-variant">/ {service.unit}</span>
                           </span>
 
@@ -531,7 +526,7 @@ export default function ProductListView() {
                 /* Empty state */
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
                   <div className="mb-6 relative">
-                    <svg viewBox="0 0 200 200" className="w-56 h-56 text-[#0a6780]">
+                    <svg viewBox="0 0 200 200" className="w-56 h-56 text-primary">
                       {/* Identical stacked drawer boxes illustration */}
                       <rect x="70" y="90" width="70" height="70" fill="#004d62" rx="6" />
                       <circle cx="105" cy="125" r="5" fill="#ffffff" />
@@ -549,7 +544,7 @@ export default function ProductListView() {
                       <circle cx="170" cy="108" r="4.5" fill="#2d6a44" />
                     </svg>
                   </div>
-                  <h2 className="text-xl font-bold text-[#002d39] font-sans mb-1.5">Tambahkan Layanan Dulu!</h2>
+                  <h2 className="text-xl font-bold text-on-surface font-sans mb-1.5">Tambahkan Layanan Dulu!</h2>
                   <p className="text-body-md text-on-surface-variant/70 font-semibold max-w-sm">
                     Silahkan tekan tombol layanan, untuk menambahkan layanan
                   </p>
@@ -566,7 +561,7 @@ export default function ProductListView() {
                     >
                       {/* Left Side: Category and its specific list items */}
                       <div className="flex-1 flex flex-col gap-3 text-left">
-                        <h3 className="text-lg font-bold text-[#002d39] font-sans flex items-center gap-2">
+                        <h3 className="text-lg font-bold text-on-surface font-sans flex items-center gap-2">
                           {group.name}
                           {!group.status && (
                             <Icon name="visibility_off" size={18} className="text-on-surface-variant/65" />
@@ -665,7 +660,7 @@ export default function ProductListView() {
                   appearance="solid"
                   startIcon={<Icon name="add" size={20} />}
                   onClick={() => handleOpenUtamaModal()}
-                  className="font-bold rounded-xl cursor-pointer bg-[#0a6780] text-white hover:brightness-95 px-5 h-11"
+                  className="font-bold rounded-xl cursor-pointer bg-primary text-white hover:brightness-95 px-5 h-11"
                 >
                   Tambahkan Layanan
                 </Button>
@@ -675,7 +670,7 @@ export default function ProductListView() {
                   appearance="solid"
                   startIcon={<Icon name="add" size={20} />}
                   onClick={() => handleOpenTambahanGroupModal()}
-                  className="font-bold rounded-xl cursor-pointer bg-[#0a6780] text-white hover:brightness-95 px-5 h-11"
+                  className="font-bold rounded-xl cursor-pointer bg-primary text-white hover:brightness-95 px-5 h-11"
                 >
                   Tambahkan Layanan Tambahan
                 </Button>
@@ -689,7 +684,7 @@ export default function ProductListView() {
       {/* 1. MODAL: TAMBAH / EDIT LAYANAN UTAMA                    */}
       {/* ======================================================== */}
       {(activeModal === 'tambah_utama' || activeModal === 'edit_utama') && (
-        <div className="fixed inset-0 bg-[#171d1e]/30 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
+        <div className="fixed inset-0 bg-on-surface/30 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
           <div className="bg-white border border-outline-variant/30 rounded-3xl w-full max-w-lg shadow-2xl p-7 text-left animate-scale-up">
             
             {/* Header with back button */}
@@ -714,9 +709,9 @@ export default function ProductListView() {
                   placeholder="Masukkan Nama Layanan..."
                   value={utamaForm.name}
                   onChange={(e) => setUtamaForm({ ...utamaForm, name: e.target.value })}
-                  className={`w-full bg-[#eff5f6] border ${
-                    errors.name ? 'border-error' : 'border-[#b9eaff]'
-                  } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all`}
+                  className={`w-full bg-surface-container-low border ${
+                    errors.name ? 'border-error' : 'border-primary-container'
+                  } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all`}
                 />
                 {errors.name && <p className="mt-1 text-body-sm text-error">{errors.name}</p>}
               </div>
@@ -729,7 +724,7 @@ export default function ProductListView() {
                   value={utamaForm.description}
                   onChange={(e) => setUtamaForm({ ...utamaForm, description: e.target.value })}
                   rows="3.5"
-                  className="w-full bg-[#eff5f6] border border-[#b9eaff] rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all resize-none leading-relaxed"
+                  className="w-full bg-surface-container-low border border-primary-container rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all resize-none leading-relaxed"
                 />
               </div>
 
@@ -743,9 +738,9 @@ export default function ProductListView() {
                       placeholder="Masukkan Harga"
                       value={utamaForm.price}
                       onChange={(e) => setUtamaForm({ ...utamaForm, price: e.target.value })}
-                      className={`w-full bg-[#eff5f6] border ${
-                        errors.price ? 'border-error' : 'border-[#b9eaff]'
-                      } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all font-sans`}
+                      className={`w-full bg-surface-container-low border ${
+                        errors.price ? 'border-error' : 'border-primary-container'
+                      } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all font-sans`}
                     />
                     {errors.price && <p className="mt-1 text-body-sm text-error">{errors.price}</p>}
                   </div>
@@ -755,10 +750,10 @@ export default function ProductListView() {
                     <button
                       type="button"
                       onClick={() => setUnitDropdownOpen(!unitDropdownOpen)}
-                      className="w-full h-full bg-[#eff5f6] border border-[#b9eaff] rounded-xl px-4 flex items-center justify-between text-body-md text-[#0a6780] font-semibold cursor-pointer select-none"
+                      className="w-full h-full bg-surface-container-low border border-primary-container rounded-xl px-4 flex items-center justify-between text-body-md text-primary font-semibold cursor-pointer select-none"
                     >
                       <span>/ {utamaForm.unit}</span>
-                      <Icon name="arrow_drop_down" size={20} className="text-[#0a6780]" />
+                      <Icon name="arrow_drop_down" size={20} className="text-primary" />
                     </button>
 
                     {unitDropdownOpen && (
@@ -771,8 +766,8 @@ export default function ProductListView() {
                               setUtamaForm({ ...utamaForm, unit: u })
                               setUnitDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4 py-2.5 text-body-md font-semibold hover:bg-[#eff5f6] transition-colors text-on-surface ${
-                              utamaForm.unit === u ? 'bg-[#b9eaff]/40 text-[#004d62]' : ''
+                            className={`w-full text-left px-4 py-2.5 text-body-md font-semibold hover:bg-surface-container-low transition-colors text-on-surface ${
+                              utamaForm.unit === u ? 'bg-primary-container/40 text-on-primary-container' : ''
                             }`}
                           >
                             / {u}
@@ -788,7 +783,7 @@ export default function ProductListView() {
               <div className="flex justify-end mt-4">
                 <button
                   type="submit"
-                  className="bg-[#b9eaff] text-[#004d62] font-bold py-3 px-6 rounded-2xl hover:brightness-95 transition-all cursor-pointer shadow-xs font-sans text-label-md"
+                  className="bg-primary-container text-on-primary-container font-bold py-3 px-6 rounded-2xl hover:brightness-95 transition-all cursor-pointer shadow-xs font-sans text-label-md"
                 >
                   {activeModal === 'edit_utama' ? 'Simpan Layanan' : 'Tambahkan Layanan'}
                 </button>
@@ -802,7 +797,7 @@ export default function ProductListView() {
       {/* 2A. MODAL: EDIT KELOMPOK LAYANAN TAMBAHAN                */}
       {/* ======================================================== */}
       {activeModal === 'edit_tambahan' && (
-        <div className="fixed inset-0 bg-[#171d1e]/30 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
+        <div className="fixed inset-0 bg-on-surface/30 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
           <div className="bg-white border border-outline-variant/30 rounded-3xl w-full max-w-lg shadow-2xl p-7 text-left animate-scale-up">
             
             {/* Header */}
@@ -826,9 +821,9 @@ export default function ProductListView() {
                   placeholder="Contoh: Selimut, Baju Putih..."
                   value={tambahanForm.name}
                   onChange={(e) => setTambahanForm({ ...tambahanForm, name: e.target.value })}
-                  className={`w-full bg-[#eff5f6] border ${
-                    errors.name ? 'border-error' : 'border-[#b9eaff]'
-                  } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all`}
+                  className={`w-full bg-surface-container-low border ${
+                    errors.name ? 'border-error' : 'border-primary-container'
+                  } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all`}
                 />
                 {errors.name && <p className="mt-1 text-body-sm text-error">{errors.name}</p>}
               </div>
@@ -836,7 +831,7 @@ export default function ProductListView() {
               <div className="flex justify-end mt-4">
                 <button
                   type="submit"
-                  className="bg-[#b9eaff] text-[#004d62] font-bold py-3 px-6 rounded-2xl hover:brightness-95 transition-all cursor-pointer shadow-xs font-sans text-label-md"
+                  className="bg-primary-container text-on-primary-container font-bold py-3 px-6 rounded-2xl hover:brightness-95 transition-all cursor-pointer shadow-xs font-sans text-label-md"
                 >
                   Simpan Layanan
                 </button>
@@ -850,7 +845,7 @@ export default function ProductListView() {
       {/* 2B. MODAL: TAMBAH LAYANAN TAMBAHAN (Tambah Layanan Tambahan.png) */}
       {/* ======================================================== */}
       {activeModal === 'tambah_tambahan' && (
-        <div className="fixed inset-0 bg-[#171d1e]/30 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
+        <div className="fixed inset-0 bg-on-surface/30 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
           <div className="bg-white border border-outline-variant/30 rounded-3xl w-full max-w-lg shadow-2xl p-7 text-left animate-scale-up">
             
             {/* Header */}
@@ -875,9 +870,9 @@ export default function ProductListView() {
                   placeholder="Masukkan Harga"
                   value={spesifikForm.groupNameText}
                   onChange={(e) => setSpesifikForm({ ...spesifikForm, groupNameText: e.target.value })}
-                  className={`w-full bg-[#eff5f6] border ${
-                    errors.groupNameText ? 'border-error' : 'border-[#b9eaff]'
-                  } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all`}
+                  className={`w-full bg-surface-container-low border ${
+                    errors.groupNameText ? 'border-error' : 'border-primary-container'
+                  } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all`}
                 />
                 {errors.groupNameText && <p className="mt-1 text-body-sm text-error">{errors.groupNameText}</p>}
               </div>
@@ -890,9 +885,9 @@ export default function ProductListView() {
                   placeholder="Pemutih + Pelembut"
                   value={spesifikForm.name}
                   onChange={(e) => setSpesifikForm({ ...spesifikForm, name: e.target.value })}
-                  className={`w-full bg-[#eff5f6] border ${
-                    errors.name ? 'border-error' : 'border-[#b9eaff]'
-                  } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all`}
+                  className={`w-full bg-surface-container-low border ${
+                    errors.name ? 'border-error' : 'border-primary-container'
+                  } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all`}
                 />
                 {errors.name && <p className="mt-1 text-body-sm text-error">{errors.name}</p>}
               </div>
@@ -907,9 +902,9 @@ export default function ProductListView() {
                       placeholder="Masukkan Harga"
                       value={spesifikForm.price}
                       onChange={(e) => setSpesifikForm({ ...spesifikForm, price: e.target.value })}
-                      className={`w-full bg-[#eff5f6] border ${
-                        errors.price ? 'border-error' : 'border-[#b9eaff]'
-                      } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all font-sans`}
+                      className={`w-full bg-surface-container-low border ${
+                        errors.price ? 'border-error' : 'border-primary-container'
+                      } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all font-sans`}
                     />
                     {errors.price && <p className="mt-1 text-body-sm text-error">{errors.price}</p>}
                   </div>
@@ -919,10 +914,10 @@ export default function ProductListView() {
                     <button
                       type="button"
                       onClick={() => setUnitDropdownOpen(!unitDropdownOpen)}
-                      className="w-full h-full bg-[#eff5f6] border border-[#b9eaff] rounded-xl px-4 flex items-center justify-between text-body-md text-[#0a6780] font-semibold cursor-pointer select-none"
+                      className="w-full h-full bg-surface-container-low border border-primary-container rounded-xl px-4 flex items-center justify-between text-body-md text-primary font-semibold cursor-pointer select-none"
                     >
                       <span>/ {spesifikForm.unit}</span>
-                      <Icon name="arrow_drop_down" size={20} className="text-[#0a6780]" />
+                      <Icon name="arrow_drop_down" size={20} className="text-primary" />
                     </button>
 
                     {unitDropdownOpen && (
@@ -935,8 +930,8 @@ export default function ProductListView() {
                               setSpesifikForm({ ...spesifikForm, unit: u })
                               setUnitDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4 py-2.5 text-body-md font-semibold hover:bg-[#eff5f6] transition-colors text-on-surface ${
-                              spesifikForm.unit === u ? 'bg-[#b9eaff]/40 text-[#004d62]' : ''
+                            className={`w-full text-left px-4 py-2.5 text-body-md font-semibold hover:bg-surface-container-low transition-colors text-on-surface ${
+                              spesifikForm.unit === u ? 'bg-primary-container/40 text-on-primary-container' : ''
                             }`}
                           >
                             / {u}
@@ -952,7 +947,7 @@ export default function ProductListView() {
               <div className="flex justify-end mt-4">
                 <button
                   type="submit"
-                  className="bg-[#b9eaff] text-[#004d62] font-bold py-3 px-6 rounded-2xl hover:brightness-95 transition-all cursor-pointer shadow-xs font-sans text-label-md"
+                  className="bg-primary-container text-on-primary-container font-bold py-3 px-6 rounded-2xl hover:brightness-95 transition-all cursor-pointer shadow-xs font-sans text-label-md"
                 >
                   Tambahkan Layanan
                 </button>
@@ -966,7 +961,7 @@ export default function ProductListView() {
       {/* 3. MODAL: TAMBAH / EDIT ITEM SPESIFIK (LAYANAN SPESIFIK) */}
       {/* ======================================================== */}
       {(activeModal === 'tambah_spesifik' || activeModal === 'edit_spesifik') && (
-        <div className="fixed inset-0 bg-[#171d1e]/30 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
+        <div className="fixed inset-0 bg-on-surface/30 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
           <div className="bg-white border border-outline-variant/30 rounded-3xl w-full max-w-lg shadow-2xl p-7 text-left animate-scale-up">
             
             {/* Header */}
@@ -992,8 +987,8 @@ export default function ProductListView() {
                     <button
                       type="button"
                       onClick={() => setGroupDropdownOpen(!groupDropdownOpen)}
-                      className={`w-full bg-[#eff5f6] border ${
-                        errors.groupId ? 'border-error' : 'border-[#b9eaff]'
+                      className={`w-full bg-surface-container-low border ${
+                        errors.groupId ? 'border-error' : 'border-primary-container'
                       } rounded-xl px-4 py-3 flex items-center justify-between text-body-md text-on-surface-variant font-semibold cursor-pointer select-none text-left`}
                     >
                       <span>
@@ -1001,7 +996,7 @@ export default function ProductListView() {
                          layananUtama.find(x => x.id === spesifikForm.groupId)?.name || 
                          'Pilih Layanan'}
                       </span>
-                      <Icon name="arrow_drop_down" size={20} className="text-[#0a6780]" />
+                      <Icon name="arrow_drop_down" size={20} className="text-primary" />
                     </button>
                     {errors.groupId && <p className="mt-1 text-body-sm text-error">{errors.groupId}</p>}
 
@@ -1013,7 +1008,7 @@ export default function ProductListView() {
                             setShowNewGroupInput(true)
                             setGroupDropdownOpen(false)
                           }}
-                          className="w-full text-left px-4.5 py-3 text-body-md font-bold text-[#0a6780] hover:bg-[#eff5f6] transition-colors flex items-center gap-2 cursor-pointer border-b border-outline-variant/10"
+                          className="w-full text-left px-4.5 py-3 text-body-md font-bold text-primary hover:bg-surface-container-low transition-colors flex items-center gap-2 cursor-pointer border-b border-outline-variant/10"
                         >
                           <Icon name="add" size={18} />
                           Tambah kelompok tambahan baru
@@ -1031,8 +1026,8 @@ export default function ProductListView() {
                               setSpesifikForm({ ...spesifikForm, groupId: service.id })
                               setGroupDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4.5 py-2.5 text-body-md font-semibold hover:bg-[#eff5f6] transition-colors text-on-surface ${
-                              spesifikForm.groupId === service.id ? 'bg-[#b9eaff]/30 text-[#004d62]' : ''
+                            className={`w-full text-left px-4.5 py-2.5 text-body-md font-semibold hover:bg-surface-container-low transition-colors text-on-surface ${
+                              spesifikForm.groupId === service.id ? 'bg-primary-container/30 text-on-primary-container' : ''
                             }`}
                           >
                             {service.name}
@@ -1051,8 +1046,8 @@ export default function ProductListView() {
                               setSpesifikForm({ ...spesifikForm, groupId: g.id })
                               setGroupDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4.5 py-2.5 text-body-md font-semibold hover:bg-[#eff5f6] transition-colors text-on-surface ${
-                              spesifikForm.groupId === g.id ? 'bg-[#b9eaff]/30 text-[#004d62]' : ''
+                            className={`w-full text-left px-4.5 py-2.5 text-body-md font-semibold hover:bg-surface-container-low transition-colors text-on-surface ${
+                              spesifikForm.groupId === g.id ? 'bg-primary-container/30 text-on-primary-container' : ''
                             }`}
                           >
                             {g.name}
@@ -1069,9 +1064,9 @@ export default function ProductListView() {
                       placeholder="Ketik Kelompok Baru (contoh: Jas)..."
                       value={newGroupNameInline}
                       onChange={(e) => setNewGroupNameInline(e.target.value)}
-                      className={`flex-1 bg-[#eff5f6] border ${
-                        errors.newGroupName ? 'border-error' : 'border-[#b9eaff]'
-                      } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all`}
+                      className={`flex-1 bg-surface-container-low border ${
+                        errors.newGroupName ? 'border-error' : 'border-primary-container'
+                      } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all`}
                     />
                     <button
                       type="button"
@@ -1093,9 +1088,9 @@ export default function ProductListView() {
                   placeholder="Contoh: Pemutih + Pelembut, Selimut Kecil..."
                   value={spesifikForm.name}
                   onChange={(e) => setSpesifikForm({ ...spesifikForm, name: e.target.value })}
-                  className={`w-full bg-[#eff5f6] border ${
-                    errors.name ? 'border-error' : 'border-[#b9eaff]'
-                  } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all`}
+                  className={`w-full bg-surface-container-low border ${
+                    errors.name ? 'border-error' : 'border-primary-container'
+                  } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all`}
                 />
                 {errors.name && <p className="mt-1 text-body-sm text-error">{errors.name}</p>}
               </div>
@@ -1110,9 +1105,9 @@ export default function ProductListView() {
                       placeholder="Masukkan Harga"
                       value={spesifikForm.price}
                       onChange={(e) => setSpesifikForm({ ...spesifikForm, price: e.target.value })}
-                      className={`w-full bg-[#eff5f6] border ${
-                        errors.price ? 'border-error' : 'border-[#b9eaff]'
-                      } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-[#0a6780] focus:bg-white transition-all font-sans`}
+                      className={`w-full bg-surface-container-low border ${
+                        errors.price ? 'border-error' : 'border-primary-container'
+                      } rounded-xl px-4 py-3 text-body-md text-on-surface outline-none focus:border-primary focus:bg-white transition-all font-sans`}
                     />
                     {errors.price && <p className="mt-1 text-body-sm text-error">{errors.price}</p>}
                   </div>
@@ -1122,10 +1117,10 @@ export default function ProductListView() {
                     <button
                       type="button"
                       onClick={() => setUnitDropdownOpen(!unitDropdownOpen)}
-                      className="w-full h-full bg-[#eff5f6] border border-[#b9eaff] rounded-xl px-4 flex items-center justify-between text-body-md text-[#0a6780] font-semibold cursor-pointer select-none"
+                      className="w-full h-full bg-surface-container-low border border-primary-container rounded-xl px-4 flex items-center justify-between text-body-md text-primary font-semibold cursor-pointer select-none"
                     >
                       <span>/ {spesifikForm.unit}</span>
-                      <Icon name="arrow_drop_down" size={20} className="text-[#0a6780]" />
+                      <Icon name="arrow_drop_down" size={20} className="text-primary" />
                     </button>
 
                     {unitDropdownOpen && (
@@ -1138,8 +1133,8 @@ export default function ProductListView() {
                               setSpesifikForm({ ...spesifikForm, unit: u })
                               setUnitDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4 py-2.5 text-body-md font-semibold hover:bg-[#eff5f6] transition-colors text-on-surface ${
-                              spesifikForm.unit === u ? 'bg-[#b9eaff]/40 text-[#004d62]' : ''
+                            className={`w-full text-left px-4 py-2.5 text-body-md font-semibold hover:bg-surface-container-low transition-colors text-on-surface ${
+                              spesifikForm.unit === u ? 'bg-primary-container/40 text-on-primary-container' : ''
                             }`}
                           >
                             / {u}
@@ -1154,12 +1149,60 @@ export default function ProductListView() {
               <div className="flex justify-end mt-4">
                 <button
                   type="submit"
-                  className="bg-[#b9eaff] text-[#004d62] font-bold py-3 px-6 rounded-2xl hover:brightness-95 transition-all cursor-pointer shadow-xs font-sans text-label-md"
+                  className="bg-primary-container text-on-primary-container font-bold py-3 px-6 rounded-2xl hover:brightness-95 transition-all cursor-pointer shadow-xs font-sans text-label-md"
                 >
                   Tambahkan Layanan
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-on-surface/30 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in font-sans">
+          <div className="bg-white rounded-3xl p-6.5 max-w-sm w-full shadow-lg border border-outline-variant/30 flex flex-col gap-5 text-left">
+            <div className="flex items-center gap-3 text-error">
+              <Icon name="warning" size={28} className="text-error" />
+              <h3 className="text-xl font-bold text-on-surface font-sans">Konfirmasi Hapus</h3>
+            </div>
+            
+            <p className="text-body-md text-on-surface-variant font-medium leading-relaxed">
+              {deleteConfirm.message}
+            </p>
+            
+            <div className="flex gap-3 justify-end mt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="border border-outline-variant hover:bg-surface-container text-on-surface-variant font-bold py-2.5 px-4 rounded-xl transition-all cursor-pointer text-label-sm font-sans"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const { type, id, extraId } = deleteConfirm
+                  setDeleteConfirm(null)
+                  try {
+                    if (type === 'utama') {
+                      await productService.deleteLayananUtama(id)
+                    } else if (type === 'tambahan') {
+                      await productService.deleteLayananTambahanGroup(id)
+                    } else if (type === 'spesifik') {
+                      await productService.deleteLayananSpesifik(extraId, id)
+                    }
+                    await loadData()
+                  } catch (err) {
+                    console.error(err)
+                  }
+                }}
+                className="bg-error text-white hover:bg-error/95 font-bold py-2.5 px-4 rounded-xl transition-all cursor-pointer shadow-xs text-label-sm font-sans"
+              >
+                Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}
