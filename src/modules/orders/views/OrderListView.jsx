@@ -243,6 +243,13 @@ export default function OrderListView() {
   ])
   const [replyText, setReplyText] = useState('')
   const [activeEditingOrderId, setActiveEditingOrderId] = useState(null)
+  const autoReplyTimeoutRef = useRef(null)
+
+  // Batalin auto-reply yang masih pending kalau component unmount, biar
+  // nggak manggil setState di component yang udah nggak ada.
+  useEffect(() => {
+    return () => clearTimeout(autoReplyTimeoutRef.current)
+  }, [])
 
   // Fungsi toggle checkbox filter status
   const handleStatusCheckboxChange = (statusKey) => {
@@ -298,7 +305,7 @@ export default function OrderListView() {
     if (!replyText.trim()) return
 
     const userMessage = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       sender: 'Utama Laundry',
       role: 'Owner',
       text: replyText,
@@ -309,11 +316,12 @@ export default function OrderListView() {
     setChatMessages((prev) => [...prev, userMessage])
     setReplyText('')
 
-    setTimeout(() => {
+    clearTimeout(autoReplyTimeoutRef.current)
+    autoReplyTimeoutRef.current = setTimeout(() => {
       setChatMessages((prev) => [
         ...prev,
         {
-          id: Date.now() + 1,
+          id: crypto.randomUUID(),
           sender: 'Rani Puspita',
           role: 'Pelanggan',
           text: 'Oke kak makasih infonya! 👍',
@@ -648,7 +656,7 @@ export default function OrderListView() {
                                 type="date"
                                 value={startDate || ''}
                                 onChange={(e) => setStartDate(e.target.value || null)}
-                                className="w-full bg-transparent text-label-sm font-bold text-[#004d62] outline-none cursor-pointer [color-scheme:light]"
+                                className="w-full bg-transparent text-label-sm font-bold text-on-primary-container outline-none cursor-pointer [color-scheme:light]"
                               />
                             </div>
                           </div>
@@ -659,7 +667,7 @@ export default function OrderListView() {
                                 type="date"
                                 value={endDate || ''}
                                 onChange={(e) => setEndDate(e.target.value || null)}
-                                className="w-full bg-transparent text-label-sm font-bold text-[#004d62] outline-none cursor-pointer [color-scheme:light]"
+                                className="w-full bg-transparent text-label-sm font-bold text-on-primary-container outline-none cursor-pointer [color-scheme:light]"
                               />
                             </div>
                           </div>
@@ -680,7 +688,7 @@ export default function OrderListView() {
                       </button>
                       <button
                         onClick={() => setIsFilterDrawerOpen(false)}
-                        className="flex-grow bg-[#b9eaff] hover:bg-[#a6e2fc] text-[#004d62] py-2 rounded-xl text-label-sm font-extrabold shadow-sm transition-all cursor-pointer text-center"
+                        className="flex-grow bg-primary-container hover:bg-[#a6e2fc] text-on-primary-container py-2 rounded-xl text-label-sm font-extrabold shadow-sm transition-all cursor-pointer text-center"
                       >
                         Tambahkan Pesanan
                       </button>
@@ -967,7 +975,7 @@ export default function OrderListView() {
             {/* Widget 4: Tombol Tambah Pesanan (Besar) */}
             <button
               onClick={() => setIsAddDrawerOpen(true)}
-              className="w-full flex items-center justify-center gap-2 bg-[#b9eaff] hover:bg-[#a6e2fc] active:bg-[#8dd8f9] text-[#004d62] font-sans font-extrabold py-3.5 px-4 rounded-xl transition-all duration-200 cursor-pointer shadow-sm hover:shadow active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 bg-primary-container hover:bg-[#a6e2fc] active:bg-[#8dd8f9] text-on-primary-container font-sans font-extrabold py-3.5 px-4 rounded-xl transition-all duration-200 cursor-pointer shadow-sm hover:shadow active:scale-[0.98]"
             >
               <Icon name="add" size={20} />
               <span>Tambah Pesanan</span>
@@ -1197,7 +1205,7 @@ export default function OrderListView() {
               <div className="border-t border-outline-variant/20 pt-4 flex">
                 <button
                   type="submit"
-                  className="w-full bg-[#b9eaff] hover:bg-[#a6e2fc] active:bg-[#8dd8f9] text-[#004d62] font-sans font-extrabold py-3.5 px-4 rounded-xl transition-all duration-200 cursor-pointer shadow-sm hover:shadow active:scale-[0.98] text-center"
+                  className="w-full bg-primary-container hover:bg-[#a6e2fc] active:bg-[#8dd8f9] text-on-primary-container font-sans font-extrabold py-3.5 px-4 rounded-xl transition-all duration-200 cursor-pointer shadow-sm hover:shadow active:scale-[0.98] text-center"
                 >
                   Tambahkan Pesanan
                 </button>

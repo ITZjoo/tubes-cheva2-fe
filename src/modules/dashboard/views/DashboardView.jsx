@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Icon from '../../../components/ui/Icon'
 import Sidebar from '../../../components/ui/Sidebar'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
@@ -97,13 +97,20 @@ export default function DashboardView() {
     },
   ])
   const [replyText, setReplyText] = useState('')
+  const autoReplyTimeoutRef = useRef(null)
+
+  // Batalin auto-reply yang masih pending kalau component unmount, biar
+  // nggak manggil setState di component yang udah nggak ada.
+  useEffect(() => {
+    return () => clearTimeout(autoReplyTimeoutRef.current)
+  }, [])
 
   const handleSendReply = (e) => {
     e.preventDefault()
     if (!replyText.trim()) return
 
     const userMessage = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       sender: 'Utama Laundry',
       role: 'Owner',
       text: replyText,
@@ -115,11 +122,12 @@ export default function DashboardView() {
     setReplyText('')
 
     // Simulasi jawaban otomatis (auto-reply) setelah 1.5 detik
-    setTimeout(() => {
+    clearTimeout(autoReplyTimeoutRef.current)
+    autoReplyTimeoutRef.current = setTimeout(() => {
       setChatMessages((prev) => [
         ...prev,
         {
-          id: Date.now() + 1,
+          id: crypto.randomUUID(),
           sender: 'Rani Puspita',
           role: 'Pelanggan',
           text: 'Oke kak makasih infonya! 👍',
@@ -398,11 +406,11 @@ export default function DashboardView() {
               {/* Legend */}
               <div className="flex items-center justify-center gap-8 text-label-sm font-bold mt-2">
                 <span className="flex items-center gap-2 text-on-surface">
-                  <span className="w-4 h-1.5 bg-[#0a6780] rounded-full inline-block"></span>
+                  <span className="w-4 h-1.5 bg-primary rounded-full inline-block"></span>
                   Pemasukan Hari Ini
                 </span>
                 <span className="flex items-center gap-2 text-on-surface-variant/80">
-                  <span className="w-4 h-1.5 bg-[#bca7e2] rounded-full inline-block"></span>
+                  <span className="w-4 h-1.5 bg-tertiary-fixed-dim rounded-full inline-block"></span>
                   Pengeluaran Kemarin
                 </span>
               </div>
