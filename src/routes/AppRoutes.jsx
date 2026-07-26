@@ -6,6 +6,7 @@ import ProductListView from '../modules/products/views/ProductListView'
 import ProductFormView from '../modules/products/views/ProductFormView'
 import OrderListView from '../modules/orders/views/OrderListView'
 import OrderDetailView from '../modules/orders/views/OrderDetailView'
+import HistoryView from '../modules/history/views/HistoryView'
 
 export default function AppRoutes() {
   return (
@@ -23,6 +24,8 @@ export default function AppRoutes() {
 
       <Route path="/orders" element={<OrderListView />} />
       <Route path="/orders/:id" element={<OrderDetailView />} />
+
+      <Route path="/history" element={<HistoryView />} />
     </Routes>
   )
 }
