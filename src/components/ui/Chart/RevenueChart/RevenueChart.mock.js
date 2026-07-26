@@ -16,9 +16,9 @@ export const revenueMockData = {
     { label: 'Min', income: 1950000, expense: 1050000 },
   ],
   month: [
-    { label: 'Mgu 1', income: 5200000, expense: 4100000 },
-    { label: 'Mgu 2', income: 6800000, expense: 5300000 },
-    { label: 'Mgu 3', income: 6100000, expense: 5900000 },
-    { label: 'Mgu 4', income: 8400000, expense: 6200000 },
+    { label: 'Week 1', income: 5200000, expense: 4100000 },
+    { label: 'Week 2', income: 6800000, expense: 5300000 },
+    { label: 'Week 3', income: 6100000, expense: 5900000 },
+    { label: 'Week 4', income: 8400000, expense: 6200000 },
   ],
 }

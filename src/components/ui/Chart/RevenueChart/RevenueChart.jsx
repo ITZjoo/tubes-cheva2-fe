@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   ResponsiveContainer,
   AreaChart,
@@ -21,13 +21,41 @@ const PERIODS = [
   { key: 'week', label: 'Minggu ini' },
   { key: 'month', label: 'Bulan ini' },
 ]
-
-const Y_TICKS = [0, 500000, 1000000, 2000000]
 const CARD_WIDTH = 645
 const CARD_HEIGHT = 402
 
 function formatRupiah(value) {
   return value.toLocaleString('id-ID')
+}
+function niceNumber(value, round) {
+  if (value <= 0) return 0
+  const exponent = Math.floor(Math.log10(value))
+  const fraction = value / 10 ** exponent
+  let niceFraction
+  if (round) {
+    if (fraction < 1.5) niceFraction = 1
+    else if (fraction < 3) niceFraction = 2
+    else if (fraction < 7) niceFraction = 5
+    else niceFraction = 10
+  } else if (fraction <= 1) {
+    niceFraction = 1
+  } else if (fraction <= 2) {
+    niceFraction = 2
+  } else if (fraction <= 5) {
+    niceFraction = 5
+  } else {
+    niceFraction = 10
+  }
+  return niceFraction * 10 ** exponent
+}
+
+function getNiceTicks(maxValue, tickCount = 5) {
+  if (!maxValue || maxValue <= 0) return [0, 500000, 1000000, 1500000, 2000000]
+  const step = niceNumber(maxValue / (tickCount - 1), true)
+  const niceMax = Math.ceil(maxValue / step) * step
+  const ticks = []
+  for (let v = 0; v <= niceMax; v += step) ticks.push(v)
+  return ticks
 }
 
 function RevenueTooltip({ active, payload, label }) {
@@ -77,6 +105,13 @@ export default function RevenueChart({
   const [internalPeriod, setInternalPeriod] = useState(defaultPeriod)
   const activePeriod = period ?? internalPeriod
   const chartData = data?.[activePeriod] ?? []
+  const yTicks = useMemo(() => {
+    const dataMax = chartData.reduce(
+      (max, point) => Math.max(max, point.income ?? 0, point.expense ?? 0),
+      0
+    )
+    return getNiceTicks(dataMax)
+  }, [chartData])
 
   const handlePeriodClick = (key) => {
     onPeriodChange?.(key)
@@ -85,8 +120,8 @@ export default function RevenueChart({
 
   return (
     <div
-      className={`flex flex-col rounded-[18px] bg-surface-container-lowest p-6 shadow-[0_1px_6px_0_rgba(0,0,0,0.10)] ${className}`}
-      style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
+      className={`flex w-full flex-col rounded-[18px] bg-surface-container-lowest p-6 shadow-[0_1px_6px_0_rgba(0,0,0,0.10)] ${className}`}
+      style={{ maxWidth: CARD_WIDTH, aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}` }}
     >
       <div className="mb-4 flex shrink-0 items-center justify-between gap-4">
         <Typography variant="label-lg" as="h3" className="leading-[140%]">
@@ -113,12 +148,11 @@ export default function RevenueChart({
                   width: 95,
                   height: 35,
                   borderStyle: 'solid',
-                  // Menyesuaikan ketebalan border agar tidak ada garis vertikal di tengah
                   borderWidth: isFirst
-                    ? '0.6px 0px 0.6px 0.6px' // Hanya punya border kiri, atas, bawah
+                    ? '0.6px 0px 0.6px 0.6px'
                     : isLast
-                      ? '0.6px 0.6px 0.6px 0px' // Hanya punya border kanan, atas, bawah
-                      : '0.6px 0px 0.6px 0px', // Tengah: Hanya border atas, bawah
+                      ? '0.6px 0.6px 0.6px 0px'
+                      : '0.6px 0px 0.6px 0px',
                   borderColor: isActive
                     ? 'var(--color-on-primary-container)'
                     : 'var(--color-on-surface-variant)',
@@ -182,8 +216,8 @@ export default function RevenueChart({
               }}
             />
             <YAxis
-              ticks={Y_TICKS}
-              domain={[0, 'dataMax + 200000']}
+              ticks={yTicks}
+              domain={[0, yTicks[yTicks.length - 1]]}
               axisLine={false}
               tickLine={false}
               width={64}
@@ -232,7 +266,7 @@ export default function RevenueChart({
         )}
       </div>
 
-      <div className="mt-3 flex shrink-0 items-center justify-center gap-6">
+      <div className="mt-3 flex shrink-0 items-center gap-6">
         <div className="flex items-center gap-2">
           <LegendMarker color="var(--color-primary)" />
           <Typography variant="label-sm" as="span" className="text-on-surface-variant">
