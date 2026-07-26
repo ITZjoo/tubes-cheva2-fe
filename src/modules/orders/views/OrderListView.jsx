@@ -4,6 +4,7 @@ import Sidebar from '../../../components/ui/Sidebar'
 import StatusBadge from '../../../components/ui/StatusBadge'
 import Stepper from '../../../components/ui/Stepper'
 import QuantityInput from '../../../components/ui/QuantityInput'
+import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 
 // 1. Ilustrasi SVG Kustom untuk Halaman Kosong Utama (Belum Ada Pesanan)
 const EmptyOrdersIllustration = () => (
@@ -112,6 +113,8 @@ const parseOrderDate = (dateStr) => {
 }
 
 export default function OrderListView() {
+  const handleSidebarNavigate = useSidebarNavigate()
+
   // 1. Data Mockup Pesanan
   const [orders, setOrders] = useState([
     {
@@ -494,7 +497,7 @@ export default function OrderListView() {
   return (
     <div className="flex min-h-screen bg-surface">
       {/* Sidebar kiri */}
-      <Sidebar activeItemId="pesanan" />
+      <Sidebar activeItemId="pesanan" onItemClick={handleSidebarNavigate} />
 
       {/* Konten Utama */}
       <main className="flex-1 overflow-x-hidden p-6 md:p-8 font-body max-w-[1400px] mx-auto flex flex-col gap-6">
