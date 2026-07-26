@@ -102,3 +102,4 @@ follow the same one-folder-per-component convention as `components/ui`.
 - Every new shared component needs a story before it's considered done.
 - Components take plain props and callbacks; they never import a
   module's `services/*` or reach into `context/` directly.
+
