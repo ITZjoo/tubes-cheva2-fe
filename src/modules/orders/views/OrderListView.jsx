@@ -1,10 +1,18 @@
 import { useState, useRef, useEffect } from 'react'
 import Icon from '../../../components/ui/Icon'
-import Sidebar from '../../../components/ui/Sidebar'
+import PageShell from '../../../components/ui/PageShell'
 import StatusBadge from '../../../components/ui/StatusBadge'
 import Stepper from '../../../components/ui/Stepper'
 import QuantityInput from '../../../components/ui/QuantityInput'
+import Drawer from '../../../components/ui/Drawer'
+import FilterDrawer from '../../../components/ui/FilterDrawer'
+import EditStatusDrawer from '../../../components/ui/EditStatusDrawer'
+import TeleportPanel from '../../../components/ui/TeleportPanel'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
+import * as orderService from '../services/orderService'
+import * as customerService from '../../customers/services/customerService'
+import * as serviceService from '../../products/services/productService'
+import { BE_TO_FE } from '../utils/orderStatus'
 
 // 1. Ilustrasi SVG Kustom untuk Halaman Kosong Utama (Belum Ada Pesanan)
 const EmptyOrdersIllustration = () => (
@@ -69,6 +77,9 @@ const EmptyFilterIllustration = () => (
   </svg>
 )
 
+const ORDERS_PER_PAGE = 3
+const ORDERS_FETCH_LIMIT = 200
+
 const STATUS_STEPS = [
   { id: 'menunggu', label: 'Menunggu', icon: 'hourglass_empty' },
   { id: 'dicuci', label: 'Dicuci', icon: 'local_laundry_service' },
@@ -79,158 +90,139 @@ const STATUS_STEPS = [
   { id: 'selesai', label: 'Selesai', icon: 'check_circle' },
   { id: 'dibatalkan', label: 'Dibatalkan', icon: 'cancel' },
 ]
-// Helper untuk parsing format tanggal "22 Juni 15:30" atau "Baru saja" ke Date object
-const parseOrderDate = (dateStr) => {
-  if (!dateStr || dateStr === 'Baru saja') {
-    return new Date() // default ke hari ini
-  }
-  
-  const indonesianMonths = {
-    januari: 0, februari: 1, maret: 2, april: 3, mei: 4, juni: 5,
-    juli: 6, agustus: 7, september: 8, oktober: 9, november: 10, desember: 11
-  }
 
-  const cleanStr = dateStr.toLowerCase().trim()
-  const parts = cleanStr.split(/\s+/) // split by space
-  
-  const day = parseInt(parts[0], 10) || 1
-  const monthStr = parts[1]
-  const month = indonesianMonths[monthStr] !== undefined ? indonesianMonths[monthStr] : 5 // default ke Juni
+function formatOrderDate(iso) {
+  const date = new Date(iso)
+  const datePart = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })
+  const timePart = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':')
+  return `${datePart} ${timePart}`
+}
 
-  // Sesuai mockup, rentang tanggal disetel ke tahun 2026
-  const dateObj = new Date(2026, month, day)
-  
-  if (parts[2]) {
-    const timeParts = parts[2].split(':')
-    const hours = parseInt(timeParts[0], 10) || 0
-    const minutes = parseInt(timeParts[1], 10) || 0
-    dateObj.setHours(hours, minutes, 0, 0)
-  } else {
-    dateObj.setHours(12, 0, 0, 0)
+// Each backend Order carries exactly one Service (no line-item cart), so a
+// "Tambah Pesanan" submission with several lines becomes several backend
+// orders that share the same customer — this adapter renders one of them.
+function mapOrderToDisplay(order) {
+  const unit = order.service?.type === 'SATUAN' ? 'Pcs' : 'Kg'
+  const qty = order.service?.type === 'SATUAN' ? order.itemCount : order.weight
+  return {
+    beId: order.id,
+    beStatus: order.status,
+    id: order.orderNumber,
+    customer: order.customer?.name ?? '',
+    customerId: order.customerId,
+    date: formatOrderDate(order.createdAt),
+    createdAt: new Date(order.createdAt),
+    status: BE_TO_FE[order.status] ?? 'menunggu',
+    services: [{ name: `${order.service?.name ?? 'Layanan'}${qty ? ` - ${qty} ${unit}` : ''}`, price: order.totalPrice }],
+    total: order.totalPrice,
   }
-
-  return dateObj
 }
 
 export default function OrderListView() {
   const handleSidebarNavigate = useSidebarNavigate()
 
-  // 1. Data Mockup Pesanan
-  const [orders, setOrders] = useState([
-    {
-      id: 'TRX-0230045698',
-      customer: 'Rani Puspita',
-      date: '22 Juni 15:30',
-      status: 'menunggu',
-      services: [
-        { name: 'Cuci Sekilo - 7.4 Kg', price: 37300 },
-        { name: 'Selimut Kecil - 1', price: 37300 },
-      ],
-      total: 74600,
-    },
-    {
-      id: 'TRX-0230015698',
-      customer: 'Alberto',
-      date: '22 Juni 15:30',
-      status: 'dicuci',
-      services: [
-        { name: 'Cuci Sekilo - 7.4 Kg', price: 37300 },
-        { name: 'Selimut Kecil - 1', price: 37300 },
-      ],
-      total: 74600,
-    },
-    {
-      id: 'TRX-0230025698',
-      customer: 'Azzam',
-      date: '22 Juni 15:30',
-      status: 'dikeringkan',
-      services: [
-        { name: 'Cuci Sekilo - 7.4 Kg', price: 37300 },
-        { name: 'Selimut Kecil - 1', price: 37300 },
-      ],
-      total: 74600,
-    },
-    {
-      id: 'TRX-0230035698',
-      customer: 'Azzam',
-      date: '22 Juni 15:30',
-      status: 'menunggu',
-      services: [
-        { name: 'Cuci Sekilo - 7.4 Kg', price: 37300 },
-        { name: 'Selimut Kecil - 1', price: 37300 },
-      ],
-      total: 74600,
-    },
-  ])
+  const [orders, setOrders] = useState([])
+  const [ordersLoading, setOrdersLoading] = useState(true)
+
+  const loadOrders = async () => {
+    try {
+      setOrdersLoading(true)
+      const { data } = await orderService.listOrders({ limit: ORDERS_FETCH_LIMIT })
+      setOrders(data.map(mapOrderToDisplay))
+    } catch (err) {
+      console.error('Failed to load orders', err)
+    } finally {
+      setOrdersLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadOrders()
+  }, [])
 
   // 2. States untuk Pencarian, Filter Stepper, & Filter Panel
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState(null)
-  
-  // State Pencarian & Filter Popover Ref
+
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
-  
-  const searchContainerRef = useRef(null)
-  const filterContainerRef = useRef(null)
 
-  // Klik di luar untuk menutup suggestion box dan filter popover
+  const searchContainerRef = useRef(null)
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
         setIsSearchFocused(false)
-      }
-      if (filterContainerRef.current && !filterContainerRef.current.contains(event.target)) {
-        setIsFilterDrawerOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // 3. States Filter Panel (`Filter.png`)
-  const [filterStatuses, setFilterStatuses] = useState({
-    menunggu: false,
-    dicuci: false,
-    dikeringkan: false,
-    disetrika: false,
-    siap_diambil: false,
-    diantar: false,
-    selesai: false,
-    dibatalkan: false,
-  })
-  const [filterServices, setFilterServices] = useState({
-    kiloan: false,
-    selimut: false,
+  const [activeFilters, setActiveFilters] = useState({
+    dateRange: { from: null, to: null },
+    statuses: [],
+    services: [],
+    sortOrder: null,
   })
 
-  // States tambahan filter.png
-  const [sortOrder, setSortOrder] = useState(null) // 'asc' atau 'desc' atau null
-  const [startDate, setStartDate] = useState(null) // format YYYY-MM-DD
-  const [endDate, setEndDate] = useState(null) // format YYYY-MM-DD
+  const [currentPage, setCurrentPage] = useState(1)
 
-  // 4. States Tambah Pesanan Drawer samping (`Tambah Pesan.png`)
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter, activeFilters])
+
+  // 4. States Tambah Pesanan Drawer samping
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
-  const [newCustomerName, setNewCustomerName] = useState('')
   const [kiloanWeight, setKiloanWeight] = useState('')
-  
-  // Daftar kuantiti tambahan menggunakan komponen QuantityInput
-  const [additionalQty, setAdditionalQty] = useState({
-    selimutKecil: 0,
-    selimutBesar: 0,
-    spreiKecil: 0,
-    spreiBesar: 0,
-    bantalKecil: 0,
-    bantalBesar: 0,
-    bonekaKecil: 0,
-    bonekaBesar: 0,
-    bedCoverKecil: 0,
-    bedCoverBesar: 0,
-    karpetKecil: 0,
-    karpetBesar: 0,
-  })
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
-  // 5. States Chat & Edit Status Row
+  // Katalog layanan real dari backend: layanan utama per-Kg (dipakai untuk
+  // baris "Cuci Kiloan") dan layanan tambahan per-satuan (menggantikan daftar
+  // 12 item hardcoded sebelumnya, biar sinkron dengan halaman Layanan).
+  const [mainServices, setMainServices] = useState([])
+  const [additionalServices, setAdditionalServices] = useState([])
+  const [additionalQty, setAdditionalQty] = useState({})
+
+  useEffect(() => {
+    serviceService
+      .listServices()
+      .then((data) => {
+        setMainServices(data.filter((s) => s.type !== 'SATUAN'))
+        setAdditionalServices(data.filter((s) => s.type === 'SATUAN'))
+      })
+      .catch((err) => console.error('Failed to load service catalog', err))
+  }, [])
+
+  const mainService = mainServices[0] ?? null
+
+  // Pelanggan & pencarian/tambah pelanggan pada drawer Tambah Pesanan — dicari
+  // langsung ke backend, bukan dari array lokal.
+  const [customerResults, setCustomerResults] = useState([])
+  const [customerQuery, setCustomerQuery] = useState('')
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [customerSuggestOpen, setCustomerSuggestOpen] = useState(false)
+  const [customerPanelMode, setCustomerPanelMode] = useState('list') // 'list' | 'add'
+  const [newCustomerPhone, setNewCustomerPhone] = useState('')
+  const [customerAddError, setCustomerAddError] = useState('')
+  const customerFieldRef = useRef(null)
+
+  const trimmedCustomerQuery = customerQuery.trim()
+
+  useEffect(() => {
+    if (!customerSuggestOpen || customerPanelMode !== 'list') return undefined
+    const timeout = setTimeout(() => {
+      customerService
+        .listCustomers({ search: trimmedCustomerQuery || undefined, limit: 8 })
+        .then(({ data }) => setCustomerResults(data))
+        .catch((err) => console.error('Failed to search customers', err))
+    }, 250)
+    return () => clearTimeout(timeout)
+  }, [trimmedCustomerQuery, customerSuggestOpen, customerPanelMode])
+
+  // 5. States Chat & Edit Status Row — chat widget tidak punya endpoint di
+  // backend (tidak ada model Message), jadi tetap simulasi lokal seperti semula.
   const [chatMessages, setChatMessages] = useState([
     {
       id: 1,
@@ -242,64 +234,97 @@ export default function OrderListView() {
     },
   ])
   const [replyText, setReplyText] = useState('')
-  const [activeEditingOrderId, setActiveEditingOrderId] = useState(null)
+  const [editStatusOrderId, setEditStatusOrderId] = useState(null)
+  const [editStatusOrderDetail, setEditStatusOrderDetail] = useState(null)
   const autoReplyTimeoutRef = useRef(null)
 
-  // Batalin auto-reply yang masih pending kalau component unmount, biar
-  // nggak manggil setState di component yang udah nggak ada.
   useEffect(() => {
     return () => clearTimeout(autoReplyTimeoutRef.current)
   }, [])
 
-  // Fungsi toggle checkbox filter status
-  const handleStatusCheckboxChange = (statusKey) => {
-    setFilterStatuses((prev) => ({ ...prev, [statusKey]: !prev[statusKey] }))
-  }
+  useEffect(() => {
+    if (editStatusOrderId === null) {
+      setEditStatusOrderDetail(null)
+      return
+    }
+    orderService
+      .getOrder(editStatusOrderId)
+      .then((order) => {
+        const statusHistory = {}
+        // Multiple backend statuses can map to the same FE step (e.g. PENDING
+        // and PICKUP both show as "menunggu") — keep the earliest timestamp.
+        ;[...order.statusHistories].forEach((entry) => {
+          const feKey = BE_TO_FE[entry.status]
+          if (feKey && !statusHistory[feKey]) {
+            statusHistory[feKey] = new Date(entry.createdAt).toLocaleDateString('id-ID', {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric',
+            })
+          }
+        })
+        setEditStatusOrderDetail({ ...mapOrderToDisplay(order), statusHistory })
+      })
+      .catch((err) => console.error('Failed to load order detail', err))
+  }, [editStatusOrderId])
 
-  // Fungsi toggle checkbox filter layanan
-  const handleServiceCheckboxChange = (serviceKey) => {
-    setFilterServices((prev) => ({ ...prev, [serviceKey]: !prev[serviceKey] }))
-  }
-
-  // Apakah ada filter aktif dari Panel Drawer?
   const isPanelFilterActive =
-    Object.values(filterStatuses).some(Boolean) ||
-    Object.values(filterServices).some(Boolean) ||
-    sortOrder !== null ||
-    startDate !== null ||
-    endDate !== null
+    activeFilters.statuses.length > 0 ||
+    activeFilters.services.length > 0 ||
+    activeFilters.sortOrder !== null ||
+    activeFilters.dateRange.from !== null ||
+    activeFilters.dateRange.to !== null
 
-  // Fungsi reset seluruh filter drawer
-  const handleResetFilters = () => {
-    setFilterStatuses({
-      menunggu: false,
-      dicuci: false,
-      dikeringkan: false,
-      disetrika: false,
-      siap_diambil: false,
-      diantar: false,
-      selesai: false,
-      dibatalkan: false,
-    })
-    setFilterServices({
-      kiloan: false,
-      selimut: false,
-    })
-    setSortOrder(null)
-    setStartDate(null)
-    setEndDate(null)
-    setStatusFilter(null)
+  // "Jenis Layanan" filter options come from the real, admin-editable
+  // service catalog instead of a fixed category list.
+  const serviceFilterOptions = [...mainServices, ...additionalServices].map((s) => s.name)
+
+  const selectCustomer = (customer) => {
+    setCustomerQuery(customer.name)
+    setSelectedCustomer(customer)
+    setCustomerSuggestOpen(false)
+    setCustomerPanelMode('list')
   }
 
-  // Handle edit status pesanan
-  const handleUpdateStatus = (orderId, nextStatus) => {
-    setOrders((prev) =>
-      prev.map((ord) => (ord.id === orderId ? { ...ord, status: nextStatus } : ord))
-    )
-    setActiveEditingOrderId(null)
+  const openAddCustomerPanel = () => {
+    setNewCustomerPhone('')
+    setCustomerAddError('')
+    setCustomerPanelMode('add')
   }
 
-  // Kirim balasan chat
+  const handleAddCustomer = async () => {
+    const name = customerQuery.trim()
+    const phone = newCustomerPhone.trim()
+    if (!name || !phone) return
+    setCustomerAddError('')
+    try {
+      const created = await customerService.createCustomer({ name, phone })
+      setSelectedCustomer(created)
+      setCustomerQuery(created.name)
+      setCustomerSuggestOpen(false)
+      setCustomerPanelMode('list')
+    } catch (err) {
+      setCustomerAddError(err.message)
+    }
+  }
+
+  const closeCustomerPanel = () => {
+    setCustomerSuggestOpen(false)
+    setCustomerPanelMode('list')
+  }
+
+  const handleUpdateStatus = async (orderId, nextStatus) => {
+    const target = orders.find((ord) => ord.beId === orderId) ?? editStatusOrderDetail
+    if (!target) return
+    try {
+      await orderService.advanceStatus(orderId, target.beStatus, nextStatus)
+      await loadOrders()
+      setEditStatusOrderId(null)
+    } catch (err) {
+      window.alert(err.message)
+    }
+  }
+
   const handleSendReply = (e) => {
     e.preventDefault()
     if (!replyText.trim()) return
@@ -332,42 +357,35 @@ export default function OrderListView() {
     }, 1500)
   }
 
-  // Helper to compute currently selected services and their prices dynamically
+  // Hitung baris layanan yang sedang dipilih di drawer Tambah Pesanan —
+  // satu baris per layanan (Kiloan + tiap layanan tambahan dengan qty > 0).
   const calculateCurrentServices = () => {
     const selected = []
     let totalSum = 0
 
-    // Kiloan utama
     const weightVal = parseFloat(kiloanWeight)
-    if (weightVal > 0) {
-      const price = Math.round(weightVal * 5000)
-      selected.push({ name: 'Cuci Kiloan', detail: `Cuci Kiloan - ${weightVal} Kg`, price })
+    if (weightVal > 0 && mainService) {
+      const price = Math.round(weightVal * (mainService.pricePerKg ?? 0))
+      selected.push({
+        name: mainService.name,
+        detail: `${mainService.name} - ${weightVal} Kg`,
+        price,
+        serviceId: mainService.id,
+        weight: weightVal,
+      })
       totalSum += price
     }
 
-    // List harga kuantiti tambahan
-    const priceList = {
-      selimutKecil: { label: 'Selimut Kecil', p: 15000 },
-      selimutBesar: { label: 'Selimut Besar', p: 25000 },
-      spreiKecil: { label: 'Sprei Kecil', p: 10000 },
-      spreiBesar: { label: 'Sprei Besar', p: 15000 },
-      bantalKecil: { label: 'Bantal Kecil', p: 5000 },
-      bantalBesar: { label: 'Bantal Besar', p: 8000 },
-      bonekaKecil: { label: 'Bantal Kecil', p: 8000 }, // Matches mockup under "Boneka" section
-      bonekaBesar: { label: 'Bantal Besar', p: 15000 },
-      bedCoverKecil: { label: 'Bantal Kecil', p: 20000 }, // Matches mockup under "Bed Cover" section
-      bedCoverBesar: { label: 'Bantal Besar', p: 30000 },
-      karpetKecil: { label: 'Karpet Kecil', p: 25000 },
-      karpetBesar: { label: 'Karpet Besar', p: 35000 },
-    }
-
-    Object.entries(additionalQty).forEach(([key, val]) => {
-      if (val > 0 && priceList[key]) {
-        const itemPrice = priceList[key].p * val
+    additionalServices.forEach((service) => {
+      const qty = additionalQty[service.id] ?? 0
+      if (qty > 0) {
+        const itemPrice = (service.priceUnit ?? 0) * qty
         selected.push({
-          name: priceList[key].label,
-          detail: `${priceList[key].label} - ${val}`,
-          price: itemPrice
+          name: service.name,
+          detail: `${service.name} - ${qty}`,
+          price: itemPrice,
+          serviceId: service.id,
+          itemCount: qty,
         })
         totalSum += itemPrice
       }
@@ -376,102 +394,86 @@ export default function OrderListView() {
     return { selected, totalSum }
   }
 
-  // Menambahkan Pesanan Baru dari Drawer Samping
-  const handleSaveNewOrder = (e) => {
-    e.preventDefault()
-    if (!newCustomerName.trim()) return
-
-    const { selected, totalSum } = calculateCurrentServices()
-
-    const builtServices = selected.map(item => ({
-      name: item.detail,
-      price: item.price
-    }))
-
-    // Jika tidak memilih apa pun, beri default
-    if (builtServices.length === 0) {
-      builtServices.push({ name: 'Cuci Kiloan - 5.0 Kg', price: 25000 })
-    }
-
-    const calculatedTotal = totalSum === 0 ? 25000 : totalSum
-
-    const newOrderObj = {
-      id: `TRX-02300${orders.length + 45698 + 1}`,
-      customer: newCustomerName,
-      date: 'Baru saja',
-      status: 'menunggu',
-      services: builtServices,
-      total: calculatedTotal,
-    }
-
-    setOrders((prev) => [newOrderObj, ...prev])
-    setIsAddDrawerOpen(false)
-    
-    // Reset inputs
-    setNewCustomerName('')
+  const resetAddDrawer = () => {
+    setCustomerQuery('')
+    setSelectedCustomer(null)
+    setNewCustomerPhone('')
+    setCustomerSuggestOpen(false)
+    setCustomerPanelMode('list')
     setKiloanWeight('')
-    setAdditionalQty({
-      selimutKecil: 0,
-      selimutBesar: 0,
-      spreiKecil: 0,
-      spreiBesar: 0,
-      bantalKecil: 0,
-      bantalBesar: 0,
-      bonekaKecil: 0,
-      bonekaBesar: 0,
-      bedCoverKecil: 0,
-      bedCoverBesar: 0,
-      karpetKecil: 0,
-      karpetBesar: 0,
-    })
+    setAdditionalQty({})
+    setSubmitError('')
   }
 
-  // Hitung jumlah pesanan berdasarkan status secara dinamis
-  const getStatusCount = (statusKey) => {
-    return orders.filter((ord) => ord.status === statusKey).length
+  // Satu order backend hanya boleh punya satu serviceId, jadi tiap baris
+  // layanan yang dipilih di drawer dikirim sebagai order terpisah, semuanya
+  // atas nama pelanggan yang sama.
+  const handleSaveNewOrder = async () => {
+    if (!selectedCustomer) {
+      setSubmitError('Pilih atau tambahkan pelanggan terlebih dahulu.')
+      return
+    }
+
+    const { selected } = calculateCurrentServices()
+    if (selected.length === 0) {
+      setSubmitError('Pilih minimal satu layanan.')
+      return
+    }
+
+    setSubmitError('')
+    setSubmitting(true)
+    try {
+      for (const line of selected) {
+        await orderService.createOrder({
+          customerId: selectedCustomer.id,
+          serviceId: line.serviceId,
+          weight: line.weight,
+          itemCount: line.itemCount,
+        })
+      }
+      setIsAddDrawerOpen(false)
+      resetAddDrawer()
+      await loadOrders()
+    } catch (err) {
+      setSubmitError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  // Proses filter utama pada list pesanan
+  const getStatusCount = (statusKey) => orders.filter((ord) => ord.status === statusKey).length
+
   const filteredOrders = orders.filter((ord) => {
-    // 1. Filter dari stepper atas
     const matchesStepper = statusFilter ? ord.status === statusFilter : true
 
-    // 2. Filter dari panel checkbox Drawer samping
-    const activeStatuses = Object.keys(filterStatuses).filter((k) => filterStatuses[k])
-    const matchesPanelStatus = activeStatuses.length > 0 ? activeStatuses.includes(ord.status) : true
+    const matchesPanelStatus =
+      activeFilters.statuses.length > 0 ? activeFilters.statuses.includes(ord.status) : true
 
-    // Filter tipe layanan
+    // Order line names are built as "<service name> - <qty> Kg/Pcs", so a
+    // real service name always appears as a prefix.
     const matchesPanelService = (() => {
-      const activeServices = Object.keys(filterServices).filter((k) => filterServices[k])
-      if (activeServices.length === 0) return true
-      return ord.services.some((srv) => {
-        const nameLower = srv.name.toLowerCase()
-        return activeServices.some((servKey) => {
-          if (servKey === 'kiloan') return nameLower.includes('kilo')
-          if (servKey === 'selimut') return nameLower.includes('selimut')
-          return false
-        })
-      })
+      if (activeFilters.services.length === 0) return true
+      return ord.services.some((srv) =>
+        activeFilters.services.some((label) => srv.name.startsWith(label))
+      )
     })()
 
-    // 3. Pencarian
     const matchesSearch =
       ord.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ord.customer.toLowerCase().includes(searchQuery.toLowerCase())
 
-    // 4. Filter Rentang Tanggal (Dari & Sampai)
     const matchesDateRange = (() => {
-      if (!startDate && !endDate) return true
-      const orderDate = parseOrderDate(ord.date)
-      if (startDate) {
-        const start = new Date(startDate)
+      const { from, to } = activeFilters.dateRange
+      if (!from && !to) return true
+      if (from) {
+        const start = new Date(from)
         start.setHours(0, 0, 0, 0)
-        if (orderDate < start) return false
+        if (ord.createdAt < start) return false
       }
-      if (endDate) {
-        const end = new Date(endDate)
+      if (to) {
+        const end = new Date(to)
         end.setHours(23, 59, 59, 999)
-        if (orderDate > end) return false
+        if (ord.createdAt > end) return false
       }
       return true
     })()
@@ -479,39 +481,39 @@ export default function OrderListView() {
     return matchesStepper && matchesPanelStatus && matchesPanelService && matchesSearch && matchesDateRange
   })
 
-  // Proses sorting berdasarkan sortOrder ('asc' untuk A-Z, 'desc' untuk Z-A)
   const displayOrders = [...filteredOrders]
-  if (sortOrder === 'asc') {
+  if (activeFilters.sortOrder === 'asc') {
     displayOrders.sort((a, b) => a.customer.localeCompare(b.customer))
-  } else if (sortOrder === 'desc') {
+  } else if (activeFilters.sortOrder === 'desc') {
     displayOrders.sort((a, b) => b.customer.localeCompare(a.customer))
   }
 
-  // Dummy list untuk pencarian baru-baru ini & saran pencarian terbaru (Search Menu.png)
-  const recentSearches = [
-    'TRX-0230045698',
-    'TRX-0230045698',
-    'TRX-0230045698',
-    'TRX-0230045698',
-  ]
+  const totalPages = Math.max(1, Math.ceil(displayOrders.length / ORDERS_PER_PAGE))
+  const paginatedOrders = displayOrders.slice(
+    (currentPage - 1) * ORDERS_PER_PAGE,
+    currentPage * ORDERS_PER_PAGE
+  )
 
-  const recentSearchOrders = [
-    { id: 'TRX-0230045698', weight: '7.1 Kg', status: 'menunggu', icon: 'hourglass_empty', bg: 'bg-surface-container text-outline' },
-    { id: 'TRX-0230015698', weight: '7.1 Kg', status: 'dicuci', icon: 'local_laundry_service', bg: 'bg-info-container/30 text-info' },
-    { id: 'TRX-0230025698', weight: '7.1 Kg', status: 'diantar', icon: 'local_shipping', bg: 'bg-warning-container/30 text-warning' },
-    { id: 'TRX-0230035698', weight: '7.1 Kg', status: 'selesai', icon: 'check_circle', bg: 'bg-secondary-container text-secondary' },
-  ]
+  const recentSearches = orders.slice(0, 4).map((ord) => ord.id)
+  const recentSearchOrders = orders.slice(0, 4).map((ord) => {
+    const iconByStatus = {
+      menunggu: { icon: 'hourglass_empty', bg: 'bg-surface-container text-outline' },
+      dicuci: { icon: 'local_laundry_service', bg: 'bg-info-container/30 text-info' },
+      diantar: { icon: 'local_shipping', bg: 'bg-warning-container/30 text-warning' },
+      selesai: { icon: 'check_circle', bg: 'bg-secondary-container text-secondary' },
+    }
+    const { icon, bg } = iconByStatus[ord.status] ?? { icon: 'description', bg: 'bg-surface-container text-outline' }
+    return { id: ord.id, weight: ord.services[0]?.name ?? '', status: ord.status, icon, bg }
+  })
 
   return (
-    <div className="flex min-h-screen bg-surface">
-      {/* Sidebar kiri */}
-      <Sidebar activeItemId="pesanan" onItemClick={handleSidebarNavigate} />
-
-      {/* Konten Utama */}
-      <main className="flex-1 overflow-x-hidden p-6 md:p-8 font-body max-w-[1400px] mx-auto flex flex-col gap-6">
-        
+    <PageShell
+      activeItemId="pesanan"
+      onItemClick={handleSidebarNavigate}
+      mainClassName="p-6 md:p-8 font-body max-w-[1400px] mx-auto flex flex-col gap-6"
+    >
         {/* 1. Bagian Atas: Stepper / Filter Status (Horizontal) */}
-        <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 shadow-sm overflow-x-auto custom-scrollbar">
+        <section className="shrink-0 bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 shadow-sm overflow-x-auto custom-scrollbar">
           <Stepper
             current={statusFilter}
             onStepClick={(stepKey) => setStatusFilter(statusFilter === stepKey ? null : stepKey)}
@@ -521,19 +523,18 @@ export default function OrderListView() {
 
         {/* 2. Layout Tengah: Daftar Pesanan (Kiri) & Widgets Kanan */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          
+
           {/* A. KOLOM KIRI: Daftar Pesanan */}
           <div className="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-5 min-h-[500px]">
             <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <h3 className="text-subtitle font-sans font-bold text-on-surface">
                 Daftar Pesan
               </h3>
-              
-              {/* Status Filter Indicator & Popover */}
-              <div className="relative" ref={filterContainerRef}>
+
+              <div className="relative">
                 {isPanelFilterActive || statusFilter ? (
                   <button
-                    onClick={() => setIsFilterDrawerOpen(!isFilterDrawerOpen)}
+                    onClick={() => setIsFilterDrawerOpen(true)}
                     className="flex items-center gap-1.5 text-label-sm font-bold text-primary bg-primary-container/45 px-3 py-1.5 rounded-xl border border-primary/25 cursor-pointer hover:bg-primary-container/60 transition-colors"
                   >
                     <Icon name="filter_alt" size={16} />
@@ -542,7 +543,7 @@ export default function OrderListView() {
                   </button>
                 ) : (
                   <button
-                    onClick={() => setIsFilterDrawerOpen(!isFilterDrawerOpen)}
+                    onClick={() => setIsFilterDrawerOpen(true)}
                     className="flex items-center gap-1.5 text-label-sm font-bold text-primary bg-transparent border-0 outline-none cursor-pointer hover:underline"
                   >
                     <Icon name="filter_list" size={16} />
@@ -550,173 +551,35 @@ export default function OrderListView() {
                   </button>
                 )}
 
-                {/* Dropdown Popover Filter (Filter.png) */}
-                {isFilterDrawerOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xl z-30 p-5 flex flex-col gap-5 animate-scale-in">
-                    {/* Header */}
-                    <div className="flex items-center gap-3 border-b border-outline-variant/30 pb-3">
-                      <button
-                        onClick={() => setIsFilterDrawerOpen(false)}
-                        className="p-1 hover:bg-surface-container rounded-lg cursor-pointer text-on-surface-variant flex items-center justify-center"
-                        aria-label="Kembali"
-                      >
-                        <Icon name="arrow_back_ios" size={16} />
-                      </button>
-                      <h4 className="text-label-md font-sans font-extrabold text-on-surface">Filter</h4>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex flex-col gap-4 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
-                      {/* Status */}
-                      <div className="flex flex-col gap-2.5">
-                        <span className="text-[10px] font-extrabold text-on-surface-variant/70 uppercase tracking-wider">Status</span>
-                        <div className="flex flex-col gap-2">
-                          {STATUS_STEPS.map((step) => (
-                            <label key={step.id} className="flex items-center justify-between cursor-pointer select-none group py-0.5">
-                              <span className="text-label-sm font-semibold text-on-surface group-hover:text-primary transition-colors">
-                                {step.label}
-                              </span>
-                              <input
-                                type="checkbox"
-                                checked={filterStatuses[step.id] || false}
-                                onChange={() => handleStatusCheckboxChange(step.id)}
-                                className="w-4.5 h-4.5 accent-primary cursor-pointer rounded border-outline-variant focus:ring-primary"
-                              />
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Jenis Layanan */}
-                      <div className="flex flex-col gap-2.5 border-t border-outline-variant/20 pt-3">
-                        <span className="text-[10px] font-extrabold text-on-surface-variant/70 uppercase tracking-wider">Jenis Layanan</span>
-                        <div className="flex flex-col gap-2">
-                          <label className="flex items-center justify-between cursor-pointer select-none group py-0.5">
-                            <span className="text-label-sm font-semibold text-on-surface group-hover:text-primary transition-colors">
-                              Cuci Kiloan
-                            </span>
-                            <input
-                              type="checkbox"
-                              checked={filterServices.kiloan}
-                              onChange={() => handleServiceCheckboxChange('kiloan')}
-                              className="w-4.5 h-4.5 accent-primary cursor-pointer rounded border-outline-variant focus:ring-primary"
-                            />
-                          </label>
-                          <label className="flex items-center justify-between cursor-pointer select-none group py-0.5">
-                            <span className="text-label-sm font-semibold text-on-surface group-hover:text-primary transition-colors">
-                              Selimut
-                            </span>
-                            <input
-                              type="checkbox"
-                              checked={filterServices.selimut}
-                              onChange={() => handleServiceCheckboxChange('selimut')}
-                              className="w-4.5 h-4.5 accent-primary cursor-pointer rounded border-outline-variant focus:ring-primary"
-                            />
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Urutkan */}
-                      <div className="flex flex-col gap-2.5 border-t border-outline-variant/20 pt-3">
-                        <span className="text-[10px] font-extrabold text-on-surface-variant/70 uppercase tracking-wider">Urutkan</span>
-                        <div className="flex flex-col gap-2">
-                          <label className="flex items-center justify-between cursor-pointer select-none group py-0.5">
-                            <span className="text-label-sm font-semibold text-on-surface group-hover:text-primary transition-colors">
-                              A - Z
-                            </span>
-                            <input
-                              type="checkbox"
-                              checked={sortOrder === 'asc'}
-                              onChange={() => setSortOrder(sortOrder === 'asc' ? null : 'asc')}
-                              className="w-4.5 h-4.5 accent-primary cursor-pointer rounded border-outline-variant focus:ring-primary"
-                            />
-                          </label>
-                          <label className="flex items-center justify-between cursor-pointer select-none group py-0.5">
-                            <span className="text-label-sm font-semibold text-on-surface group-hover:text-primary transition-colors">
-                              Z - A
-                            </span>
-                            <input
-                              type="checkbox"
-                              checked={sortOrder === 'desc'}
-                              onChange={() => setSortOrder(sortOrder === 'desc' ? null : 'desc')}
-                              className="w-4.5 h-4.5 accent-primary cursor-pointer rounded border-outline-variant focus:ring-primary"
-                            />
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Rentang Tanggal */}
-                      <div className="flex flex-col gap-2.5 border-t border-outline-variant/20 pt-3">
-                        <span className="text-[10px] font-extrabold text-on-surface-variant/70 uppercase tracking-wider">Rentang Tanggal</span>
-                        <div className="flex flex-col gap-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-label-sm font-semibold text-on-surface">Dari</span>
-                            <div className="relative flex items-center bg-[#eaf6f9] rounded-xl px-3 py-1.5 border border-transparent focus-within:border-primary w-44">
-                              <input
-                                type="date"
-                                value={startDate || ''}
-                                onChange={(e) => setStartDate(e.target.value || null)}
-                                className="w-full bg-transparent text-label-sm font-bold text-on-primary-container outline-none cursor-pointer [color-scheme:light]"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-label-sm font-semibold text-on-surface">Sampai</span>
-                            <div className="relative flex items-center bg-[#eaf6f9] rounded-xl px-3 py-1.5 border border-transparent focus-within:border-primary w-44">
-                              <input
-                                type="date"
-                                value={endDate || ''}
-                                onChange={(e) => setEndDate(e.target.value || null)}
-                                className="w-full bg-transparent text-label-sm font-bold text-on-primary-container outline-none cursor-pointer [color-scheme:light]"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="border-t border-outline-variant/30 pt-3 flex gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleResetFilters()
-                        }}
-                        className="flex-grow border border-outline py-2 rounded-xl text-label-sm font-bold text-on-surface-variant hover:bg-surface-container cursor-pointer transition-colors"
-                      >
-                        Reset
-                      </button>
-                      <button
-                        onClick={() => setIsFilterDrawerOpen(false)}
-                        className="flex-grow bg-primary-container hover:bg-[#a6e2fc] text-on-primary-container py-2 rounded-xl text-label-sm font-extrabold shadow-sm transition-all cursor-pointer text-center"
-                      >
-                        Tambahkan Pesanan
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <FilterDrawer
+                  open={isFilterDrawerOpen}
+                  onClose={() => setIsFilterDrawerOpen(false)}
+                  serviceOptions={serviceFilterOptions}
+                  onApply={setActiveFilters}
+                />
               </div>
             </div>
 
-            {/* Konten List Pesanan */}
-            {displayOrders.length > 0 ? (
+            {ordersLoading ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 py-12">
+                <span className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></span>
+                <p className="text-body-md text-on-surface-variant/70 font-semibold">Memuat pesanan...</p>
+              </div>
+            ) : displayOrders.length > 0 ? (
               <div className="flex flex-col gap-6 divide-y divide-outline-variant/25">
-                {displayOrders.map((order) => (
-                  <div key={order.id} className="pt-5 first:pt-0 flex flex-col gap-3.5 relative animate-fade-in">
-                    {/* Baris Pertama: ID, Nama, Status */}
+                {paginatedOrders.map((order) => (
+                  <div key={order.beId} className="pt-5 first:pt-0 flex flex-col gap-3.5 relative animate-fade-in">
                     <div className="flex items-start justify-between">
                       <div className="flex items-baseline gap-2">
                         <span className="text-label-md font-mono font-extrabold text-on-surface">{order.id}</span>
                         <span className="text-label-sm text-on-surface-variant/80 font-semibold">{order.customer}</span>
                       </div>
-                      
+
                       <StatusBadge status={order.status} />
                     </div>
 
-                    {/* Baris Kedua: Tanggal */}
                     <span className="text-xs text-on-surface-variant/70 font-bold -mt-2.5">{order.date}</span>
 
-                    {/* Baris Ketiga: Item Layanan */}
                     <div className="flex flex-col gap-2 bg-surface-container-low/40 p-4 rounded-xl border border-outline-variant/20">
                       <span className="text-label-sm text-on-surface-variant font-extrabold">Layanan</span>
                       {order.services.map((srv, sIdx) => (
@@ -731,49 +594,23 @@ export default function OrderListView() {
                       </div>
                     </div>
 
-                    {/* Baris Keempat: Aksi */}
                     <div className="flex items-center justify-between mt-1">
                       <button className="text-label-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-0 outline-none">
                         Lihat Receipt
                       </button>
 
-                      <div className="relative">
-                        <button
-                          onClick={() =>
-                            setActiveEditingOrderId(
-                              activeEditingOrderId === order.id ? null : order.id
-                            )
-                          }
-                          className="border border-primary/20 bg-primary-container/45 hover:bg-primary-container/60 text-primary font-sans font-bold py-1.5 px-4 rounded-xl text-label-sm transition-all duration-200 cursor-pointer shadow-sm hover:shadow active:scale-[0.98] flex items-center gap-1"
-                        >
-                          <span>Edit Status</span>
-                          <Icon name="arrow_drop_down" size={18} />
-                        </button>
-
-                        {/* Dropdown Popover Edit Status */}
-                        {activeEditingOrderId === order.id && (
-                          <div className="absolute right-0 bottom-full mb-2 w-48 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl z-20 py-2 flex flex-col">
-                            <span className="text-[10px] text-on-surface-variant font-extrabold uppercase tracking-wider px-3.5 py-1.5 border-b border-outline-variant/30">
-                              Pilih Status Baru
-                            </span>
-                            {STATUS_STEPS.map((step) => (
-                              <button
-                                key={step.id}
-                                onClick={() => handleUpdateStatus(order.id, step.id)}
-                                className="w-full text-left px-3.5 py-2 text-label-sm font-semibold hover:bg-surface-container text-on-surface transition-colors"
-                              >
-                                {step.label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <button
+                        onClick={() => setEditStatusOrderId(order.beId)}
+                        className="border border-primary/20 bg-primary-container/45 hover:bg-primary-container/60 text-primary font-sans font-bold py-1.5 px-4 rounded-xl text-label-sm transition-all duration-200 cursor-pointer shadow-sm hover:shadow active:scale-[0.98] flex items-center gap-1"
+                      >
+                        <span>Edit Status</span>
+                        <Icon name="arrow_drop_down" size={18} />
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              /* TAMPILAN KOSONG (EMPTY STATE) */
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-4">
                 {statusFilter || isPanelFilterActive ? <EmptyFilterIllustration /> : <EmptyOrdersIllustration />}
                 <div className="max-w-xs">
@@ -790,12 +627,37 @@ export default function OrderListView() {
                 </div>
               </div>
             )}
+
+            {displayOrders.length > 0 && totalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-outline-variant/30 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-1 text-label-sm font-bold text-primary disabled:text-outline disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <Icon name="chevron_left" size={18} />
+                  Sebelumnya
+                </button>
+                <span className="text-label-sm font-semibold text-on-surface-variant">
+                  Halaman {currentPage} dari {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1 text-label-sm font-bold text-primary disabled:text-outline disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Selanjutnya
+                  <Icon name="chevron_right" size={18} />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* B. KOLOM KANAN: Widgets */}
           <div className="flex flex-col gap-6">
-            
-            {/* Widget 1: Pencarian Interaktif dengan Menu Saran (Search Menu.png) */}
+
             <div ref={searchContainerRef} className="relative w-full">
               <input
                 type="text"
@@ -811,10 +673,8 @@ export default function OrderListView() {
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/85"
               />
 
-              {/* Menu Suggestion Box (Search Menu.png) */}
-              {isSearchFocused && (
+              {isSearchFocused && recentSearchOrders.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-2 z-30 bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xl p-4.5 flex flex-col gap-4 animate-scale-in">
-                  {/* Bagian Pencarian Baru-baru Ini */}
                   <div className="flex flex-col gap-2">
                     <span className="text-label-sm font-bold text-on-surface-variant/60">Pencarian baru-baru ini</span>
                     {recentSearches.map((term, idx) => (
@@ -832,7 +692,6 @@ export default function OrderListView() {
                     ))}
                   </div>
 
-                  {/* Pembatas Teks */}
                   <div className="relative flex py-1 items-center">
                     <div className="flex-grow border-t border-outline-variant/40"></div>
                     <span className="flex-shrink mx-4 text-[10px] font-extrabold text-on-surface-variant/50 uppercase tracking-wider">
@@ -841,7 +700,6 @@ export default function OrderListView() {
                     <div className="flex-grow border-t border-outline-variant/40"></div>
                   </div>
 
-                  {/* Bagian Pesanan Terbaru di Suggestion */}
                   <div className="flex flex-col gap-2.5">
                     {recentSearchOrders.map((ord) => (
                       <button
@@ -858,7 +716,9 @@ export default function OrderListView() {
                           </span>
                           <span className="text-label-sm font-bold text-on-surface">{ord.id}</span>
                         </div>
-                        <span className="text-label-sm font-semibold text-on-surface-variant/70 font-mono">{ord.weight}</span>
+                        <span className="text-label-sm font-semibold text-on-surface-variant/70 font-mono truncate max-w-[140px]">
+                          {ord.weight}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -866,7 +726,6 @@ export default function OrderListView() {
               )}
             </div>
 
-             {/* Widget 2: Total Pesanan Status Card */}
              <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4">
                <h3 className="text-subtitle font-sans font-bold text-on-surface">
                  Total Pesanan
@@ -884,7 +743,7 @@ export default function OrderListView() {
                      dibatalkan: 'bg-error-container text-error',
                    }
                    const colorClass = colors[stat.id] || 'bg-surface-container-low text-on-surface-variant/80'
-                   
+
                    return (
                      <div key={idx} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
                        <div className="flex items-center gap-3">
@@ -900,7 +759,6 @@ export default function OrderListView() {
                </div>
              </div>
 
-            {/* Widget 3: Pesan Terbaru Chat */}
             <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col justify-between gap-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-subtitle font-sans font-bold text-on-surface">
@@ -911,7 +769,6 @@ export default function OrderListView() {
                 </button>
               </div>
 
-              {/* Chat Feed */}
               <div className="flex flex-col gap-4 overflow-y-auto max-h-[190px] pr-1.5 custom-scrollbar">
                 {chatMessages.map((msg) => (
                   <div
@@ -953,7 +810,6 @@ export default function OrderListView() {
                 ))}
               </div>
 
-              {/* Reply Form */}
               <form onSubmit={handleSendReply} className="flex items-center justify-between border border-outline-variant rounded-xl p-1.5 bg-surface-container-lowest focus-within:border-primary transition-all duration-200 shadow-inner">
                 <input
                   type="text"
@@ -972,7 +828,6 @@ export default function OrderListView() {
               </form>
             </div>
 
-            {/* Widget 4: Tombol Tambah Pesanan (Besar) */}
             <button
               onClick={() => setIsAddDrawerOpen(true)}
               className="w-full flex items-center justify-center gap-2 bg-primary-container hover:bg-[#a6e2fc] active:bg-[#8dd8f9] text-on-primary-container font-sans font-extrabold py-3.5 px-4 rounded-xl transition-all duration-200 cursor-pointer shadow-sm hover:shadow active:scale-[0.98]"
@@ -984,200 +839,165 @@ export default function OrderListView() {
 
         </div>
 
-      </main>
-
       {/* ========================================================================= */}
-      {/* 3. MODAL DIALOG: Centered Tambah Pesanan Baru (Tambah Pesan.png) */}
+      {/* 3. DRAWER: Tambah Pesanan Baru */}
       {/* ========================================================================= */}
-      {isAddDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim/40 backdrop-blur-xs">
-          {/* Backdrop klik untuk tutup */}
-          <div
-            className="absolute inset-0"
-            onClick={() => setIsAddDrawerOpen(false)}
-          />
+      <Drawer
+        open={isAddDrawerOpen}
+        onClose={() => {
+          setIsAddDrawerOpen(false)
+          resetAddDrawer()
+        }}
+        title="Tambah Pesanan"
+        closeIcon="chevron_left"
+        footer={
+          <button
+            type="button"
+            onClick={handleSaveNewOrder}
+            disabled={submitting}
+            className="w-full bg-primary-container hover:bg-[#a6e2fc] active:bg-[#8dd8f9] text-on-primary-container font-sans font-extrabold py-3.5 px-4 rounded-xl transition-all duration-200 cursor-pointer shadow-sm hover:shadow active:scale-[0.98] text-center disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {submitting ? 'Menyimpan...' : 'Tambahkan Pesanan'}
+          </button>
+        }
+      >
+        <div className="flex flex-col gap-6">
 
-          {/* Konten Modal Box */}
-          <div className="relative w-full max-w-lg bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-2xl p-6 flex flex-col gap-5 animate-scale-in max-h-[85vh] overflow-y-auto custom-scrollbar">
-            {/* Header: Back arrow & Title */}
-            <div className="flex items-center gap-3 pb-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsAddDrawerOpen(false)}
-                className="hover:bg-surface-container rounded-lg cursor-pointer text-on-surface flex items-center justify-center p-1"
-                aria-label="Kembali"
-              >
-                <Icon name="arrow_back_ios" size={16} />
-              </button>
-              <h3 className="text-title font-sans font-bold text-on-surface text-lg">Tambah Pesanan</h3>
-            </div>
+          <div className="relative" ref={customerFieldRef}>
+            <span className="text-body-md font-sans font-bold text-on-surface">Nama Pelanggan</span>
+            <input
+              type="text"
+              value={customerQuery}
+              onChange={(e) => {
+                setCustomerQuery(e.target.value)
+                setSelectedCustomer(null)
+                setCustomerPanelMode('list')
+                setCustomerSuggestOpen(true)
+              }}
+              onFocus={() => setCustomerSuggestOpen(true)}
+              placeholder="Cari atau masukkan nama pelanggan"
+              className="mt-2 w-full bg-transparent border border-[#cbdff7] focus:border-primary rounded-xl px-4 py-2 text-body-md text-on-surface focus:outline-none placeholder:text-outline/40 shadow-sm"
+            />
 
-            <form onSubmit={handleSaveNewOrder} className="flex flex-col gap-6">
-              
-              {/* Field 0: Nama Pelanggan */}
-              <div className="flex flex-col gap-2">
-                <span className="text-body-md font-sans font-bold text-on-surface">Nama Pelanggan</span>
-                <input
-                  type="text"
-                  required
-                  placeholder="Masukkan nama pelanggan"
-                  value={newCustomerName}
-                  onChange={(e) => setNewCustomerName(e.target.value)}
-                  className="bg-transparent border border-[#cbdff7] focus:border-primary rounded-xl px-4 py-2 text-body-md text-on-surface focus:outline-none placeholder:text-outline/40 shadow-sm"
-                />
-              </div>
-
-              {/* Field 1: Layanan Utama (tambah pesanan1 (2).png) */}
-              <div className="flex flex-col gap-3">
-                <h4 className="text-body-md font-sans font-bold text-on-surface">Layanan utama</h4>
-                <div className="flex items-center justify-between py-1">
-                  <span className="text-body-md text-on-surface font-medium">Cuci Kiloan</span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder="Masukkan Kilogram"
-                    value={kiloanWeight}
-                    onChange={(e) => setKiloanWeight(e.target.value)}
-                    className="w-44 bg-transparent border border-[#cbdff7] focus:border-primary rounded-xl px-4 py-2 text-right font-semibold text-primary placeholder:text-primary/45 focus:outline-none shadow-sm [color-scheme:light]"
-                  />
-                </div>
-              </div>
-
-              {/* Field 2: Layanan Tambahan (tambah pesanan1 (2).png) */}
-              <div className="flex flex-col gap-4 border-t border-outline-variant/20 pt-4">
-                <h4 className="text-body-md font-sans font-bold text-on-surface">Layanan Tambahan</h4>
-                
-                <div className="flex flex-col gap-5">
-                  {/* 1. Selimut */}
-                  <div className="flex flex-col gap-2.5">
-                    <span className="text-label-md font-bold text-on-surface">Selimut</span>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Selimut Kecil</span>
-                      <QuantityInput
-                        value={additionalQty.selimutKecil}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, selimutKecil: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
+            <TeleportPanel
+              anchorRef={customerFieldRef}
+              open={
+                customerSuggestOpen &&
+                (customerPanelMode === 'add' || customerResults.length > 0 || Boolean(trimmedCustomerQuery))
+              }
+              onClose={closeCustomerPanel}
+              className="rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg"
+            >
+                {customerPanelMode === 'list' ? (
+                  customerResults.length > 0 ? (
+                    <div className="max-h-40 overflow-y-auto custom-scrollbar">
+                      {customerResults.map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          onClick={() => selectCustomer(customer)}
+                          className="block w-full px-4 py-2.5 text-left text-body-md text-on-surface hover:bg-surface-container-low"
+                        >
+                          {customer.name}
+                        </button>
+                      ))}
+                    </div>
+                  ) : trimmedCustomerQuery ? (
+                    <button
+                      type="button"
+                      onClick={openAddCustomerPanel}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-body-md text-primary hover:bg-surface-container-low"
+                    >
+                      <Icon name="add" size={18} />
+                      Tambah pelanggan baru
+                    </button>
+                  ) : null
+                ) : (
+                  <div className="flex flex-col gap-3 p-4">
+                    <div>
+                      <span className="text-label-sm font-bold text-on-surface">Nama Pelanggan</span>
+                      <input
+                        type="text"
+                        value={customerQuery}
+                        onChange={(e) => setCustomerQuery(e.target.value)}
+                        placeholder="Masukkan nama pelanggan"
+                        className="mt-1 w-full rounded-lg border border-outline-variant px-3 py-2 text-body-md text-on-surface outline-none focus:border-primary"
                       />
                     </div>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Selimut Besar</span>
-                      <QuantityInput
-                        value={additionalQty.selimutBesar}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, selimutBesar: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
+                    <div>
+                      <span className="text-label-sm font-bold text-on-surface">No. Handphone</span>
+                      <input
+                        type="tel"
+                        value={newCustomerPhone}
+                        onChange={(e) => setNewCustomerPhone(e.target.value)}
+                        placeholder="Masukkan nomor HP"
+                        className="mt-1 w-full rounded-lg border border-outline-variant px-3 py-2 text-body-md text-on-surface outline-none focus:border-primary"
                       />
+                    </div>
+                    {customerAddError && <p className="text-body-sm text-error">{customerAddError}</p>}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCustomerPanelMode('list')}
+                        className="flex-1 rounded-lg border border-outline-variant py-2 text-label-sm text-outline"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddCustomer}
+                        disabled={!trimmedCustomerQuery || !newCustomerPhone.trim()}
+                        className="flex-1 rounded-lg bg-primary py-2 text-label-sm text-on-primary transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Simpan
+                      </button>
                     </div>
                   </div>
+                )}
+            </TeleportPanel>
+          </div>
 
-                  {/* 2. Sprei */}
-                  <div className="flex flex-col gap-2.5">
-                    <span className="text-label-md font-bold text-on-surface">Sprei</span>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Sprei Kecil</span>
-                      <QuantityInput
-                        value={additionalQty.spreiKecil}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, spreiKecil: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Sprei Besar</span>
-                      <QuantityInput
-                        value={additionalQty.spreiBesar}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, spreiBesar: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 3. Bantal */}
-                  <div className="flex flex-col gap-2.5">
-                    <span className="text-label-md font-bold text-on-surface">Bantal</span>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Bantal Kecil</span>
-                      <QuantityInput
-                        value={additionalQty.bantalKecil}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, bantalKecil: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Bantal Besar</span>
-                      <QuantityInput
-                        value={additionalQty.bantalBesar}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, bantalBesar: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 4. Boneka */}
-                  <div className="flex flex-col gap-2.5">
-                    <span className="text-label-md font-bold text-on-surface">Boneka</span>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Bantal Kecil</span>
-                      <QuantityInput
-                        value={additionalQty.bonekaKecil}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, bonekaKecil: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Bantal Besar</span>
-                      <QuantityInput
-                        value={additionalQty.bonekaBesar}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, bonekaBesar: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 5. Bed Cover */}
-                  <div className="flex flex-col gap-2.5">
-                    <span className="text-label-md font-bold text-on-surface">Bed Cover</span>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Bantal Kecil</span>
-                      <QuantityInput
-                        value={additionalQty.bedCoverKecil}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, bedCoverKecil: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Bantal Besar</span>
-                      <QuantityInput
-                        value={additionalQty.bedCoverBesar}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, bedCoverBesar: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 6. Karpet */}
-                  <div className="flex flex-col gap-2.5">
-                    <span className="text-label-md font-bold text-on-surface">Karpet</span>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Karpet Kecil</span>
-                      <QuantityInput
-                        value={additionalQty.karpetKecil}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, karpetKecil: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
-                      <span>Karpet Besar</span>
-                      <QuantityInput
-                        value={additionalQty.karpetBesar}
-                        onChange={(newVal) => setAdditionalQty((prev) => ({ ...prev, karpetBesar: newVal }))}
-                        className="bg-[#eaf5f8] border-0"
-                      />
-                    </div>
+              {/* Field 1: Layanan Utama */}
+              {mainService && (
+                <div className="flex flex-col gap-3">
+                  <h4 className="text-body-md font-sans font-bold text-on-surface">Layanan utama</h4>
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-body-md text-on-surface font-medium">{mainService.name}</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      placeholder="Masukkan Kilogram"
+                      value={kiloanWeight}
+                      onChange={(e) => setKiloanWeight(e.target.value)}
+                      className="w-44 bg-transparent border border-[#cbdff7] focus:border-primary rounded-xl px-4 py-2 text-right font-semibold text-primary placeholder:text-primary/45 focus:outline-none shadow-sm [color-scheme:light]"
+                    />
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Total Harga Breakdown (tambah pesanan1 (1).png) */}
+              {/* Field 2: Layanan Tambahan — daftar flat dari katalog Layanan Tambahan real */}
+              {additionalServices.length > 0 && (
+                <div className="flex flex-col gap-4 border-t border-outline-variant/20 pt-4">
+                  <h4 className="text-body-md font-sans font-bold text-on-surface">Layanan Tambahan</h4>
+                  <div className="flex flex-col gap-2.5">
+                    {additionalServices.map((service) => (
+                      <div key={service.id} className="flex items-center justify-between text-body-md text-on-surface-variant font-medium pl-1">
+                        <span>{service.name}</span>
+                        <QuantityInput
+                          value={additionalQty[service.id] ?? 0}
+                          onChange={(newVal) =>
+                            setAdditionalQty((prev) => ({ ...prev, [service.id]: newVal }))
+                          }
+                          className="bg-[#eaf5f8] border-0"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Total Harga Breakdown */}
               {(() => {
                 const { selected, totalSum } = calculateCurrentServices()
                 if (selected.length === 0) return null
@@ -1201,19 +1021,17 @@ export default function OrderListView() {
                 )
               })()}
 
-              {/* Action Buttons (tambah pesanan1 (1).png) */}
-              <div className="border-t border-outline-variant/20 pt-4 flex">
-                <button
-                  type="submit"
-                  className="w-full bg-primary-container hover:bg-[#a6e2fc] active:bg-[#8dd8f9] text-on-primary-container font-sans font-extrabold py-3.5 px-4 rounded-xl transition-all duration-200 cursor-pointer shadow-sm hover:shadow active:scale-[0.98] text-center"
-                >
-                  Tambahkan Pesanan
-                </button>
-              </div>
-            </form>
-          </div>
+              {submitError && <p className="text-body-sm text-error">{submitError}</p>}
+
         </div>
-      )}
-    </div>
+      </Drawer>
+
+      <EditStatusDrawer
+        open={editStatusOrderId !== null}
+        onClose={() => setEditStatusOrderId(null)}
+        order={editStatusOrderDetail}
+        onUpdateStatus={(statusKey) => handleUpdateStatus(editStatusOrderId, statusKey)}
+      />
+    </PageShell>
   )
 }

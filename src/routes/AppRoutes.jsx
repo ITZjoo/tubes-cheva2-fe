@@ -7,6 +7,7 @@ import ProductFormView from '../modules/products/views/ProductFormView'
 import OrderListView from '../modules/orders/views/OrderListView'
 import OrderDetailView from '../modules/orders/views/OrderDetailView'
 import HistoryView from '../modules/history/views/HistoryView'
+import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRoutes() {
   return (
@@ -16,16 +17,64 @@ export default function AppRoutes() {
       <Route path="/login" element={<LoginView />} />
       <Route path="/register" element={<RegisterView />} />
 
-      <Route path="/dashboard" element={<DashboardView />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardView />
+          </ProtectedRoute>
+        }
+      />
 
-      <Route path="/products" element={<ProductListView />} />
-      <Route path="/products/new" element={<ProductFormView />} />
-      <Route path="/products/:id/edit" element={<ProductFormView />} />
+      <Route
+        path="/products"
+        element={
+          <ProtectedRoute>
+            <ProductListView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/products/new"
+        element={
+          <ProtectedRoute>
+            <ProductFormView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/products/:id/edit"
+        element={
+          <ProtectedRoute>
+            <ProductFormView />
+          </ProtectedRoute>
+        }
+      />
 
-      <Route path="/orders" element={<OrderListView />} />
-      <Route path="/orders/:id" element={<OrderDetailView />} />
-
-      <Route path="/history" element={<HistoryView />} />
+      <Route
+        path="/orders"
+        element={
+          <ProtectedRoute>
+            <OrderListView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/orders/:id"
+        element={
+          <ProtectedRoute>
+            <OrderDetailView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/history"
+        element={
+          <ProtectedRoute>
+            <HistoryView />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   )
 }

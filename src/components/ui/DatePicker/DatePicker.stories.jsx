@@ -31,3 +31,24 @@ function InteractiveDemo() {
 export const Interactive = {
   render: () => <InteractiveDemo />,
 }
+
+function RangeDemo() {
+  const [range, setRange] = useState({ from: null, to: null })
+
+  const label = () => {
+    if (!range.from) return 'Belum ada rentang dipilih'
+    if (!range.to) return `Mulai: ${range.from.toLocaleDateString('id-ID', { dateStyle: 'medium' })}`
+    return `${range.from.toLocaleDateString('id-ID', { dateStyle: 'medium' })} — ${range.to.toLocaleDateString('id-ID', { dateStyle: 'medium' })}`
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-3">
+      <DatePicker mode="range" value={range} onChange={setRange} />
+      <span className="text-body-md text-on-surface-variant">{label()}</span>
+    </div>
+  )
+}
+
+export const RangeMode = {
+  render: () => <RangeDemo />,
+}

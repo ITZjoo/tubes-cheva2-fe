@@ -15,7 +15,7 @@ export default function QuantityInput({ value = 0, min = 0, max, onChange, class
   return (
     <div
       className={[
-        'mx-auto flex h-8 w-[92px] flex-row items-center justify-center gap-2.5 rounded-lg bg-primary-container/30 px-2.5 py-[5px]',
+        'flex h-8 w-[92px] flex-row items-center justify-center gap-2.5 rounded-lg bg-primary-container/30 px-2.5 py-[5px]',
         className,
       ]
         .filter(Boolean)
