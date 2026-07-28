@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import Icon from '../Icon'
 
 // The 8 order statuses from the laundry status-tracking spec, in flow order.
@@ -13,7 +14,9 @@ export const ORDER_STEPS = [
   { key: 'dibatalkan', label: 'Dibatalkan', icon: 'cancel', tone: 'error' },
 ]
 
-const TONE_CLASSES = {
+// Exported so other status-driven components (e.g. RiwayatDrawer) can reuse
+// the same tone → color mapping instead of re-deriving their own.
+export const TONE_CLASSES = {
   neutral: { bg: 'bg-outline-variant', icon: 'text-outline', border: 'border-outline', pulse: 'bg-outline' },
   primary: { bg: 'bg-primary-container', icon: 'text-primary', border: 'border-primary', pulse: 'bg-primary' },
   secondary: {
@@ -43,10 +46,17 @@ export default function Stepper({ steps = ORDER_STEPS, current, onStepClick, cla
       {steps.map((step, index) => {
         const tone = TONE_CLASSES[step.tone] ?? TONE_CLASSES.neutral
         const isCurrent = index === currentIndex
+        const isLast = index === steps.length - 1
 
+        // Step columns and connectors are direct siblings (via Fragment, not
+        // a wrapping div) so a consumer's `justify-between`/`w-full` acts on
+        // the whole row: the connector's `flex-1` soaks up all the leftover
+        // width itself, which keeps the dashed line touching both circles
+        // instead of leaving gaps when the row is stretched wider than its
+        // natural content size.
         return (
-          <div key={step.key} className="flex items-start">
-            <div role="listitem" className="flex shrink-0 flex-col items-center gap-2">
+          <Fragment key={step.key}>
+            <div role="listitem" className="flex w-16 shrink-0 flex-col items-center gap-2">
               <span className="relative flex h-12 w-12 items-center justify-center">
                 {isCurrent && (
                   <span aria-hidden="true" className={`absolute inset-0 animate-step-pulse rounded-full ${tone.pulse}`} />
@@ -73,15 +83,12 @@ export default function Stepper({ steps = ORDER_STEPS, current, onStepClick, cla
                   />
                 )}
               </span>
-              <span className="text-label-sm whitespace-nowrap text-on-surface">{step.label}</span>
+              <span className="text-label-sm text-center text-on-surface">{step.label}</span>
             </div>
-            {index < steps.length - 1 && (
-              <span
-                aria-hidden="true"
-                className="mt-6 h-px w-16 shrink-0 border-t border-dashed border-outline"
-              />
+            {!isLast && (
+              <span aria-hidden="true" className="mt-6 h-px min-w-8 flex-1 border-t border-dashed border-outline" />
             )}
-          </div>
+          </Fragment>
         )
       })}
     </div>

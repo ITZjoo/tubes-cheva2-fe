@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useRef, useState } from 'react'
+import Drawer from '../Drawer'
 import Icon from '../Icon'
 import QuantityInput from '../QuantityInput'
+import TeleportPanel from '../TeleportPanel'
 
 export const ADDITIONAL_SERVICE_GROUPS = [
   {
@@ -57,30 +58,75 @@ export const ADDITIONAL_SERVICE_GROUPS = [
 export default function AddOrderPopover({
   triggerLabel = 'Tambah Pesanan',
   serviceGroups = ADDITIONAL_SERVICE_GROUPS,
+  customers = [],
+  onAddCustomer,
   onSubmit,
   className = '',
 }) {
   const [open, setOpen] = useState(false)
   const [weightKg, setWeightKg] = useState('')
   const [quantities, setQuantities] = useState({})
+  const [customerQuery, setCustomerQuery] = useState('')
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [suggestOpen, setSuggestOpen] = useState(false)
+  // 'list' shows matching customers (or a "tambah pelanggan baru" row when
+  // there are none); 'add' swaps the same panel to a small name+phone form.
+  const [panelMode, setPanelMode] = useState('list')
+  const [newCustomerPhone, setNewCustomerPhone] = useState('')
+  const customerFieldRef = useRef(null)
 
   const setQuantity = (key, value) => setQuantities((prev) => ({ ...prev, [key]: value }))
 
+  const trimmedName = customerQuery.trim()
+  const matchedCustomer = customers.find((customer) => customer.name.toLowerCase() === trimmedName.toLowerCase())
+  const customerSuggestions = trimmedName
+    ? customers.filter((customer) => customer.name.toLowerCase().includes(trimmedName.toLowerCase()))
+    : customers
+
+  const selectCustomer = (customer) => {
+    setCustomerQuery(customer.name)
+    setSelectedCustomer(customer)
+    setSuggestOpen(false)
+    setPanelMode('list')
+  }
+
+  const openAddPanel = () => {
+    setNewCustomerPhone('')
+    setPanelMode('add')
+  }
+
+  const handleAddCustomer = () => {
+    const name = customerQuery.trim()
+    const phone = newCustomerPhone.trim()
+    if (!name || !phone) return
+    const created = onAddCustomer?.({ name, phone }) ?? { name, phone }
+    setSelectedCustomer(created)
+    setCustomerQuery(created.name)
+    setSuggestOpen(false)
+    setPanelMode('list')
+  }
+
   const handleClose = () => setOpen(false)
 
-  useEffect(() => {
-    if (!open) return undefined
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open])
+  const closeCustomerPanel = () => {
+    setSuggestOpen(false)
+    setPanelMode('list')
+  }
 
-  const handleSubmit = () => {
-    onSubmit?.({ weightKg: Number(weightKg) || 0, quantities })
+  const resetForm = () => {
     setWeightKg('')
     setQuantities({})
+    setCustomerQuery('')
+    setSelectedCustomer(null)
+    setNewCustomerPhone('')
+    setSuggestOpen(false)
+    setPanelMode('list')
+  }
+
+  const handleSubmit = () => {
+    const customer = selectedCustomer ?? matchedCustomer ?? null
+    onSubmit?.({ weightKg: Number(weightKg) || 0, quantities, customer })
+    resetForm()
     setOpen(false)
   }
 
@@ -95,78 +141,142 @@ export default function AddOrderPopover({
         {triggerLabel}
       </button>
 
-      {open &&
-        createPortal(
-          <div
-            role="presentation"
-            className="fixed inset-0 z-30 flex items-start justify-center bg-on-surface/40 pt-24"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) handleClose()
-            }}
+      <Drawer
+        open={open}
+        onClose={handleClose}
+        title="Tambah Pesanan"
+        closeIcon="chevron_left"
+        footer={
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="w-full rounded-lg bg-primary py-2.5 text-label-md text-on-primary transition-colors hover:bg-primary/90"
           >
-            <div
-              role="dialog"
-              aria-label="Tambah Pesanan"
-              className="flex max-h-[80vh] w-[359px] flex-col rounded-lg bg-surface-container-lowest shadow-lg"
-            >
-              <div className="flex items-center gap-2.5 border-b border-outline-variant px-5 py-4">
-                <button type="button" onClick={handleClose} aria-label="Kembali" className="flex items-center">
-                  <Icon name="chevron_left" size={24} className="text-on-surface" />
-                </button>
-                <span className="text-button text-on-surface">Tambah Pesanan</span>
-              </div>
+            Simpan Pesanan
+          </button>
+        }
+      >
+        <div className="relative" ref={customerFieldRef}>
+          <span className="text-label-md font-bold text-on-surface">Nama Pelanggan</span>
+          <input
+            type="text"
+            value={customerQuery}
+            onChange={(event) => {
+              setCustomerQuery(event.target.value)
+              setSelectedCustomer(null)
+              setPanelMode('list')
+              setSuggestOpen(true)
+            }}
+            onFocus={() => setSuggestOpen(true)}
+            placeholder="Cari atau masukkan nama pelanggan"
+            className="mt-1 w-full rounded-lg border border-outline-variant px-4 py-2.5 text-body-md text-on-surface outline-none focus:border-primary"
+          />
 
-              <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
-                <span className="text-label-md font-bold text-on-surface">Layanan utama</span>
-                <div className="mt-2 flex items-center justify-between gap-3">
-                  <span className="text-body-md text-on-surface-variant">Cuci Kiloan</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={weightKg}
-                    onChange={(event) => setWeightKg(event.target.value)}
-                    placeholder="Masukkan Kilogram"
-                    className="w-36 [appearance:textfield] rounded-lg border border-primary/50 px-3 py-1.5 text-left text-label-sm text-primary placeholder:text-primary/50 focus:border-primary focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          <TeleportPanel
+            anchorRef={customerFieldRef}
+            open={suggestOpen && (panelMode === 'add' || customerSuggestions.length > 0 || Boolean(trimmedName))}
+            onClose={closeCustomerPanel}
+            className="rounded-lg border border-outline-variant bg-surface-container-lowest shadow-lg"
+          >
+              {panelMode === 'list' ? (
+                customerSuggestions.length > 0 ? (
+                  <div className="max-h-40 overflow-y-auto custom-scrollbar">
+                    {customerSuggestions.map((customer) => (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        onClick={() => selectCustomer(customer)}
+                        className="block w-full px-4 py-2.5 text-left text-body-md text-on-surface hover:bg-surface-container-low"
+                      >
+                        {customer.name}
+                      </button>
+                    ))}
+                  </div>
+                ) : trimmedName ? (
+                  <button
+                    type="button"
+                    onClick={openAddPanel}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-body-md text-primary hover:bg-surface-container-low"
+                  >
+                    <Icon name="add" size={18} />
+                    Tambah pelanggan baru
+                  </button>
+                ) : null
+              ) : (
+                <div className="flex flex-col gap-3 p-4">
+                  <div>
+                    <span className="text-label-sm font-bold text-on-surface">Nama Pelanggan</span>
+                    <input
+                      type="text"
+                      value={customerQuery}
+                      onChange={(event) => setCustomerQuery(event.target.value)}
+                      placeholder="Masukkan nama pelanggan"
+                      className="mt-1 w-full rounded-lg border border-outline-variant px-3 py-2 text-body-md text-on-surface outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-label-sm font-bold text-on-surface">No. Handphone</span>
+                    <input
+                      type="tel"
+                      value={newCustomerPhone}
+                      onChange={(event) => setNewCustomerPhone(event.target.value)}
+                      placeholder="Masukkan nomor HP"
+                      className="mt-1 w-full rounded-lg border border-outline-variant px-3 py-2 text-body-md text-on-surface outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPanelMode('list')}
+                      className="flex-1 rounded-lg border border-outline-variant py-2 text-label-sm text-outline"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddCustomer}
+                      disabled={!trimmedName || !newCustomerPhone.trim()}
+                      className="flex-1 rounded-lg bg-primary py-2 text-label-sm text-on-primary transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Simpan
+                    </button>
+                  </div>
+                </div>
+              )}
+          </TeleportPanel>
+        </div>
+
+        <span className="mt-5 block text-label-md font-bold text-on-surface">Layanan utama</span>
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <span className="text-body-md text-on-surface-variant">Cuci Kiloan</span>
+          <input
+            type="number"
+            min="0"
+            value={weightKg}
+            onChange={(event) => setWeightKg(event.target.value)}
+            placeholder="Masukkan Kilogram"
+            className="w-36 [appearance:textfield] rounded-lg border border-primary/50 px-3 py-1.5 text-left text-label-sm text-primary placeholder:text-primary/50 focus:border-primary focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+        </div>
+
+        <span className="mt-5 block text-label-md font-bold text-on-surface">Layanan Tambahan</span>
+        {serviceGroups.map((group) => (
+          <div key={group.key} className="mt-4">
+            <span className="text-label-sm font-bold text-outline">{group.label}</span>
+            <div className="mt-2 flex flex-col gap-2">
+              {group.items.map((item) => (
+                <div key={item.key} className="flex items-center justify-between gap-3">
+                  <span className="text-body-md text-on-surface-variant">{item.label}</span>
+                  <QuantityInput
+                    value={quantities[item.key] ?? 0}
+                    onChange={(value) => setQuantity(item.key, value)}
                   />
                 </div>
-
-                <span className="mt-5 block text-label-md font-bold text-on-surface">Layanan Tambahan</span>
-                {serviceGroups.map((group) => (
-                  <div key={group.key} className="mt-4">
-                    <span className="text-label-sm font-bold text-outline">{group.label}</span>
-                    <div className="mt-2 flex flex-col gap-2">
-                      {group.items.map((item) => (
-                        <div key={item.key} className="flex items-center justify-between gap-3">
-                          <span className="text-body-md text-on-surface-variant">{item.label}</span>
-                          {/* QuantityInput centers itself via `mx-auto`; wrapping it in an
-                              equal-width box makes that centering a no-op so this row's
-                              `justify-between` is what pins it to the right edge. */}
-                          <div className="w-[92px] shrink-0">
-                            <QuantityInput
-                              value={quantities[item.key] ?? 0}
-                              onChange={(value) => setQuantity(item.key, value)}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-outline-variant px-5 py-4">
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  className="w-full rounded-lg bg-primary py-2.5 text-label-md text-on-primary transition-colors hover:bg-primary/90"
-                >
-                  Simpan Pesanan
-                </button>
-              </div>
+              ))}
             </div>
-          </div>,
-          document.body
-        )}
+          </div>
+        ))}
+      </Drawer>
     </div>
   )
 }

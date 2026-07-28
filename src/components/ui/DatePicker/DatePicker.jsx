@@ -41,8 +41,20 @@ function buildMonthGrid(viewDate) {
   return days
 }
 
-export default function DatePicker({ value = null, onChange, defaultMonth, className = '' }) {
-  const [viewDate, setViewDate] = useState(() => startOfMonth(defaultMonth ?? value ?? new Date()))
+// `mode="range"` turns this into a two-endpoint range picker: `value` becomes
+// `{ from, to }` and `onChange` receives the updated range object. The first
+// click (re)starts a range at `from` with `to` cleared; the second click
+// closes it at `to` (swapping the two if picked out of order) — this is the
+// "arrange a custom range" interaction the Filter drawer's date section
+// needs, on top of the single-date mode every other caller already uses.
+export default function DatePicker({ mode = 'single', value = null, onChange, defaultMonth, className = '' }) {
+  const isRange = mode === 'range'
+  const rangeFrom = isRange ? (value?.from ?? null) : null
+  const rangeTo = isRange ? (value?.to ?? null) : null
+
+  const [viewDate, setViewDate] = useState(() =>
+    startOfMonth(defaultMonth ?? (isRange ? rangeFrom : value) ?? new Date())
+  )
 
   const days = buildMonthGrid(viewDate)
   const today = new Date()
@@ -50,6 +62,18 @@ export default function DatePicker({ value = null, onChange, defaultMonth, class
 
   const goToPrevMonth = () => setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
   const goToNextMonth = () => setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+
+  const handleDayClick = (date) => {
+    if (!isRange) {
+      onChange?.(date)
+      return
+    }
+    if (!rangeFrom || rangeTo) {
+      onChange?.({ from: date, to: null })
+      return
+    }
+    onChange?.(date < rangeFrom ? { from: date, to: rangeFrom } : { from: rangeFrom, to: date })
+  }
 
   return (
     <div
@@ -87,30 +111,41 @@ export default function DatePicker({ value = null, onChange, defaultMonth, class
         ))}
 
         {days.map(({ date, isCurrentMonth }) => {
-          const selected = isSameDay(date, value)
+          const isFrom = isRange && isSameDay(date, rangeFrom)
+          const isTo = isRange && isSameDay(date, rangeTo)
+          const inRange = isRange && rangeFrom && rangeTo && date > rangeFrom && date < rangeTo
+          const selected = isRange ? isFrom || isTo : isSameDay(date, value)
           const isToday = isSameDay(date, today)
 
           return (
-            <button
-              key={date.toISOString()}
-              type="button"
-              onClick={() => onChange?.(date)}
-              aria-current={isToday ? 'date' : undefined}
-              aria-pressed={selected}
-              className={[
-                'mx-auto flex h-9 w-9 items-center justify-center rounded-full text-label-md transition-colors',
-                selected
-                  ? 'bg-primary text-on-primary'
-                  : isCurrentMonth
-                    ? 'text-primary hover:bg-primary-container/50'
-                    : 'text-primary-fixed-dim hover:bg-primary-container/30',
-                isToday && !selected && 'ring-1 ring-primary',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              {date.getDate()}
-            </button>
+            <div key={date.toISOString()} className="relative">
+              {inRange && <span aria-hidden="true" className="absolute inset-y-1 inset-x-0 bg-primary-container/50" />}
+              {isFrom && rangeTo && (
+                <span aria-hidden="true" className="absolute inset-y-1 left-1/2 right-0 bg-primary-container/50" />
+              )}
+              {isTo && rangeFrom && (
+                <span aria-hidden="true" className="absolute inset-y-1 left-0 right-1/2 bg-primary-container/50" />
+              )}
+              <button
+                type="button"
+                onClick={() => handleDayClick(date)}
+                aria-current={isToday ? 'date' : undefined}
+                aria-pressed={selected}
+                className={[
+                  'relative mx-auto flex h-9 w-9 items-center justify-center rounded-full text-label-md transition-colors',
+                  selected
+                    ? 'bg-primary text-on-primary'
+                    : isCurrentMonth
+                      ? 'text-primary hover:bg-primary-container/50'
+                      : 'text-primary-fixed-dim hover:bg-primary-container/30',
+                  isToday && !selected && 'ring-1 ring-primary',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {date.getDate()}
+              </button>
+            </div>
           )
         })}
       </div>

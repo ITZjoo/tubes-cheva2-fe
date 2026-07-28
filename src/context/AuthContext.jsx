@@ -1,24 +1,46 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { getStoredToken, setStoredToken } from '../services/api'
+import * as authService from '../modules/auth/services/authService'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [token, setToken] = useState(null)
+  const [token, setToken] = useState(getStoredToken())
+  const [loading, setLoading] = useState(Boolean(getStoredToken()))
+
+  useEffect(() => {
+    if (!token) {
+      setLoading(false)
+      return
+    }
+    authService
+      .getProfile()
+      .then(setUser)
+      .catch(() => {
+        setStoredToken(null)
+        setToken(null)
+        setUser(null)
+      })
+      .finally(() => setLoading(false))
+    // Only re-hydrate when the token itself changes (login/logout), not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token])
 
   const login = (userData, authToken) => {
-    // TODO: persist token (e.g. localStorage) once Sanctum auth is wired up
+    setStoredToken(authToken)
     setUser(userData)
     setToken(authToken)
   }
 
   const logout = () => {
+    setStoredToken(null)
     setUser(null)
     setToken(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

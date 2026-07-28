@@ -1,1 +1,1 @@
-export { default, ORDER_STEPS } from './Stepper'
+export { default, ORDER_STEPS, TONE_CLASSES } from './Stepper'
