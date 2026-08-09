@@ -6,11 +6,8 @@ import ProductListView from '../modules/products/views/ProductListView'
 import ProductFormView from '../modules/products/views/ProductFormView'
 import OrderListView from '../modules/orders/views/OrderListView'
 import OrderDetailView from '../modules/orders/views/OrderDetailView'
-<<<<<<< HEAD
-=======
 import HistoryView from '../modules/history/views/HistoryView'
 import NotifikasiView from '../modules/notifikasi/views/NotifikasiView'
->>>>>>> d4f2f4b (feat(notifikasi): tambah halaman notifikasi dengan list, empty state, dan story Storybook)
 import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRoutes() {
