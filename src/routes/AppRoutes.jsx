@@ -8,6 +8,9 @@ import OrderListView from '../modules/orders/views/OrderListView'
 import OrderDetailView from '../modules/orders/views/OrderDetailView'
 import HistoryView from '../modules/history/views/HistoryView'
 import NotifikasiView from '../modules/notifikasi/views/NotifikasiView'
+import NotFoundView from '../modules/errors/views/NotFoundView'
+import AccessDeniedView from '../modules/errors/views/AccessDeniedView'
+import ServerErrorView from '../modules/errors/views/ServerErrorView'
 import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRoutes() {
@@ -84,6 +87,14 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
+      <Route path="/403" element={<AccessDeniedView />} />
+      <Route path="/500" element={<ServerErrorView />} />
+
+      {/* Catch-all: unauthenticated visitors see the sidebar as a signed-out
+          shell (PageShell handles that fine) rather than being bounced to
+          /login, since a bad URL isn't the same as a bad session. */}
+      <Route path="*" element={<NotFoundView />} />
     </Routes>
   )
 }
