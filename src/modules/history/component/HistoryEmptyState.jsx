@@ -1,4 +1,4 @@
-import emptyHistoryIllustration from '../../../assets/illustrations/empty-history.png'
+import emptyHistoryIllustration from '../../../assets/illustrations/empty-history.svg'
 
 export default function HistoryEmptyState({
   title = 'Belum ada history...',
