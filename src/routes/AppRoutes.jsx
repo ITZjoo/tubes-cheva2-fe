@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginView from '../modules/auth/views/LoginView'
 import RegisterView from '../modules/auth/views/RegisterView'
+import OnboardingView from '../modules/auth/views/OnboardingView'
 import DashboardView from '../modules/dashboard/views/DashboardView'
 import ProductListView from '../modules/products/views/ProductListView'
 import ProductFormView from '../modules/products/views/ProductFormView'
@@ -14,10 +15,22 @@ import ServerErrorView from '../modules/errors/views/ServerErrorView'
 import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRoutes() {
+  const onboarded = localStorage.getItem('laundry_onboarded') === 'true'
+
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route
+        path="/"
+        element={
+          onboarded ? (
+            <Navigate to="/login" replace />
+          ) : (
+            <Navigate to="/onboarding" replace />
+          )
+        }
+      />
 
+      <Route path="/onboarding" element={<OnboardingView />} />
       <Route path="/login" element={<LoginView />} />
       <Route path="/register" element={<RegisterView />} />
 
