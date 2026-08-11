@@ -7,6 +7,7 @@ import ProductFormView from '../modules/products/views/ProductFormView'
 import OrderListView from '../modules/orders/views/OrderListView'
 import OrderDetailView from '../modules/orders/views/OrderDetailView'
 import HistoryView from '../modules/history/views/HistoryView'
+import NotifikasiView from '../modules/notifikasi/views/NotifikasiView'
 import NotFoundView from '../modules/errors/views/NotFoundView'
 import AccessDeniedView from '../modules/errors/views/AccessDeniedView'
 import ServerErrorView from '../modules/errors/views/ServerErrorView'
@@ -75,6 +76,14 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <HistoryView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifikasi"
+        element={
+          <ProtectedRoute>
+            <NotifikasiView />
           </ProtectedRoute>
         }
       />
