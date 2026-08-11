@@ -6,10 +6,6 @@ import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import NotificationItem from '../component/NotificationItem'
 import NotifikasiEmptyState from '../component/NotifikasiEmptyState'
 
-// TODO: ganti dengan pemanggilan service (mis. getNotifications()) begitu
-// endpoint-nya siap — polanya sama seperti historyService, tinggal di-fetch
-// di useEffect. Untuk sekarang dipakai data lokal biar layout & interaksi
-// bisa langsung dicoba.
 const INITIAL_NOTIFICATIONS = [
   {
     id: 'ntf-1',
@@ -59,8 +55,6 @@ export default function NotifikasiView({ initialNotifications = INITIAL_NOTIFICA
   const allIds = useMemo(() => notifications.map((n) => n.id), [notifications])
   const isAllSelected = allIds.length > 0 && selectedIds.size === allIds.length
 
-  // Kelompokkan berdasarkan tanggal, urutan tetap sesuai urutan data
-  // (asumsi backend sudah mengirim terbaru dulu).
   const groups = useMemo(() => {
     const map = new Map()
     for (const item of notifications) {
@@ -95,6 +89,10 @@ export default function NotifikasiView({ initialNotifications = INITIAL_NOTIFICA
     setSelectedIds(new Set())
   }
 
+  const handleOpenNotification = (id) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
+  }
+
   return (
     <div className="flex min-h-screen bg-surface">
       <Sidebar activeItemId="notifikasi" onItemClick={handleSidebarNavigate} />
@@ -122,9 +120,9 @@ export default function NotifikasiView({ initialNotifications = INITIAL_NOTIFICA
               type="button"
               onClick={handleMarkAsRead}
               disabled={selectedIds.size === 0}
-              className="inline-flex items-center gap-2.5 rounded-lg bg-white px-[15px] py-2.5 shadow-[0px_1px_8px_0px_rgba(0,0,0,0.15)] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 shadow-[0px_1px_8px_0px_rgba(0,0,0,0.15)] disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Icon name="mark_email_read" size={20} className="text-primary" />
+              <Icon name="mark_email_read" size={22} className="text-primary" />
               <span className="font-body font-medium text-sm leading-[2] tracking-normal text-primary">
                 Tandai Baca
               </span>
@@ -133,9 +131,9 @@ export default function NotifikasiView({ initialNotifications = INITIAL_NOTIFICA
               type="button"
               onClick={handleDelete}
               disabled={selectedIds.size === 0}
-              className="inline-flex items-center gap-2.5 rounded-lg bg-error-container px-[15px] py-2.5 shadow-[0px_1px_8px_0px_rgba(0,0,0,0.15)] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-lg bg-error-container px-5 py-3 shadow-[0px_1px_8px_0px_rgba(0,0,0,0.15)] disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Icon name="delete" size={20} className="text-on-error-container" />
+              <Icon name="delete" size={22} className="text-on-error-container" />
               <span className="font-body font-medium text-sm leading-[2] tracking-normal text-on-error-container">
                 Hapus
               </span>
@@ -163,6 +161,7 @@ export default function NotifikasiView({ initialNotifications = INITIAL_NOTIFICA
                         isRead={item.isRead}
                         checked={selectedIds.has(item.id)}
                         onCheckedChange={(checked) => toggleSelectOne(item.id, checked)}
+                        onOpen={() => handleOpenNotification(item.id)}
                       />
                     ))}
                   </div>

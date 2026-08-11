@@ -1,16 +1,17 @@
-import Typography from '../../../components/ui/Typography'
-import emptyIllustration from '../../../assets/illustrations/empty-history.png'
+import emptyIllustration from '../../../assets/illustrations/empty-history.svg'
 
 export default function NotifikasiEmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-      <img src={emptyIllustration} alt="" className="w-40 h-40 object-contain" />
-      <Typography variant="subtitle" className="text-primary">
+    <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+      <div className="w-[250px] h-[250px] p-[10px]">
+        <img src={emptyIllustration} alt="" className="w-full h-full object-contain" />
+      </div>
+      <h3 className="font-sans font-bold text-[28px] leading-none tracking-[-0.02em] text-center text-primary">
         Belum ada notifikasi...
-      </Typography>
-      <Typography variant="body-md" className="text-on-surface-variant">
+      </h3>
+      <p className="font-sans font-medium text-[24px] leading-[32px] tracking-[-0.005em] text-center text-outline">
         Tidak terdapat notifikasi baru, silahkan cek kembali nanti.
-      </Typography>
+      </p>
     </div>
   )
 }
