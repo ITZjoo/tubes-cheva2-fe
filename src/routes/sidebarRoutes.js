@@ -6,4 +6,5 @@ export const SIDEBAR_ROUTES = {
   dashboard: '/dashboard',
   pesanan: '/orders',
   layanan: '/products',
+  pengaturan: '/pengaturan',
 }

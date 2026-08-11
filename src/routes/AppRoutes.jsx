@@ -6,6 +6,8 @@ import ProductListView from '../modules/products/views/ProductListView'
 import ProductFormView from '../modules/products/views/ProductFormView'
 import OrderListView from '../modules/orders/views/OrderListView'
 import OrderDetailView from '../modules/orders/views/OrderDetailView'
+import SettingsView from '../modules/settings/views/SettingsView'
+import SettingsPlaceholderView from '../modules/settings/views/SettingsPlaceholderView'
 import NotFoundView from '../modules/errors/views/NotFoundView'
 import AccessDeniedView from '../modules/errors/views/AccessDeniedView'
 import ServerErrorView from '../modules/errors/views/ServerErrorView'
@@ -66,6 +68,47 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <OrderDetailView />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/pengaturan"
+        element={
+          <ProtectedRoute>
+            <SettingsView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pengaturan/akun"
+        element={
+          <ProtectedRoute>
+            <SettingsPlaceholderView title="Edit Profil Akun" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pengaturan/laundry"
+        element={
+          <ProtectedRoute>
+            <SettingsPlaceholderView title="Edit Profil Laundry" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pengaturan/notifikasi"
+        element={
+          <ProtectedRoute>
+            <SettingsPlaceholderView title="Pengaturan Notifikasi" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pengaturan/pembayaran"
+        element={
+          <ProtectedRoute>
+            <SettingsPlaceholderView title="Pengaturan Pembayaran" />
           </ProtectedRoute>
         }
       />
