@@ -9,6 +9,7 @@ import OrderDetailView from '../modules/orders/views/OrderDetailView'
 import HistoryView from '../modules/history/views/HistoryView'
 import NotifikasiView from '../modules/notifikasi/views/NotifikasiView'
 import SettingsView from '../modules/settings/views/SettingsView'
+import EditAccountView from '../modules/settings/views/EditAccountView'
 import SettingsPlaceholderView from '../modules/settings/views/SettingsPlaceholderView'
 import NotFoundView from '../modules/errors/views/NotFoundView'
 import AccessDeniedView from '../modules/errors/views/AccessDeniedView'
@@ -102,7 +103,7 @@ export default function AppRoutes() {
         path="/pengaturan/akun"
         element={
           <ProtectedRoute>
-            <SettingsPlaceholderView title="Edit Profil Akun" />
+            <EditAccountView />
           </ProtectedRoute>
         }
       />
