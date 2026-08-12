@@ -8,6 +8,8 @@ import Drawer from '../../../components/ui/Drawer'
 import FilterDrawer from '../../../components/ui/FilterDrawer'
 import EditStatusDrawer from '../../../components/ui/EditStatusDrawer'
 import TeleportPanel from '../../../components/ui/TeleportPanel'
+import QuickChatModal from '../../chat/components/QuickChatModal'
+import PesanCepatCard from '../../chat/components/PesanCepatCard'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import * as orderService from '../services/orderService'
 import * as customerService from '../../customers/services/customerService'
@@ -89,6 +91,36 @@ const STATUS_STEPS = [
   { id: 'diantar', label: 'Diantar', icon: 'local_shipping' },
   { id: 'selesai', label: 'Selesai', icon: 'check_circle' },
   { id: 'dibatalkan', label: 'Dibatalkan', icon: 'cancel' },
+]
+
+// TODO: ganti dengan chatService begitu backend punya endpoint/model Message.
+// Bentuk data ini yang dipakai bareng oleh QuickChatModal (lihat
+// src/modules/chat/components) — sama seperti di DashboardView.jsx.
+const INITIAL_CONVERSATIONS = [
+  {
+    id: 1,
+    name: 'Rani Puspita',
+    role: 'Pelanggan',
+    time: '10 menit lalu',
+    lastMessage: 'Kapan pesanan saya selesai ?',
+    replied: false,
+    trxId: 'TRX/0023400501',
+    date: '22 Juni 2026',
+    question: 'Kapan pesanan saya selesai ?',
+    questionTime: '10 menit lalu',
+  },
+  {
+    id: 2,
+    name: 'Alberto',
+    role: 'Pelanggan',
+    time: '15 menit lalu',
+    lastMessage: 'Apakah sudah bisa diambil ?',
+    replied: false,
+    trxId: 'TRX/0023300502',
+    date: '22 Juni 2026',
+    question: 'Apakah sudah bisa diambil ?',
+    questionTime: '15 menit lalu',
+  },
 ]
 
 function formatOrderDate(iso) {
@@ -221,26 +253,8 @@ export default function OrderListView() {
     return () => clearTimeout(timeout)
   }, [trimmedCustomerQuery, customerSuggestOpen, customerPanelMode])
 
-  // 5. States Chat & Edit Status Row — chat widget tidak punya endpoint di
-  // backend (tidak ada model Message), jadi tetap simulasi lokal seperti semula.
-  const [chatMessages, setChatMessages] = useState([
-    {
-      id: 1,
-      sender: 'Rani Puspita',
-      role: 'Pelanggan',
-      text: 'Ka, kira kira kapan yah baju aku selesai ?...',
-      time: 'Baru saja',
-      isMe: false,
-    },
-  ])
-  const [replyText, setReplyText] = useState('')
   const [editStatusOrderId, setEditStatusOrderId] = useState(null)
   const [editStatusOrderDetail, setEditStatusOrderDetail] = useState(null)
-  const autoReplyTimeoutRef = useRef(null)
-
-  useEffect(() => {
-    return () => clearTimeout(autoReplyTimeoutRef.current)
-  }, [])
 
   useEffect(() => {
     if (editStatusOrderId === null) {
@@ -267,6 +281,31 @@ export default function OrderListView() {
       })
       .catch((err) => console.error('Failed to load order detail', err))
   }, [editStatusOrderId])
+
+  // QuickChat: daftar percakapan + overlay — data dan bentuk sama seperti di
+  // DashboardView.jsx. TODO: satukan lewat context/hook bersama begitu chat
+  // punya backend sungguhan, biar Dashboard & Pesanan share satu sumber data.
+  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS)
+  const [activeChatId, setActiveChatId] = useState(INITIAL_CONVERSATIONS[0]?.id ?? null)
+  const [isQuickChatOpen, setIsQuickChatOpen] = useState(false)
+
+  const activeConversation = conversations.find((c) => c.id === activeChatId) ?? null
+  // Widget "Pesan Cepat" cuma nampilin satu preview — prioritaskan yang
+  // belum dibalas, fallback ke yang pertama.
+  const featuredConversation = conversations.find((c) => !c.replied) ?? conversations[0] ?? null
+
+  const openQuickChat = (conversationId) => {
+    setActiveChatId(conversationId)
+    setIsQuickChatOpen(true)
+  }
+
+  const handleSendReply = (conversationId, replyText) => {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conversationId ? { ...c, replied: true } : c))
+    )
+    // TODO: kirim ke backend begitu endpoint chat tersedia.
+    console.log('Kirim balasan ke', conversationId, ':', replyText)
+  }
 
   const isPanelFilterActive =
     activeFilters.statuses.length > 0 ||
@@ -323,38 +362,6 @@ export default function OrderListView() {
     } catch (err) {
       window.alert(err.message)
     }
-  }
-
-  const handleSendReply = (e) => {
-    e.preventDefault()
-    if (!replyText.trim()) return
-
-    const userMessage = {
-      id: crypto.randomUUID(),
-      sender: 'Utama Laundry',
-      role: 'Owner',
-      text: replyText,
-      time: 'Baru saja',
-      isMe: true,
-    }
-
-    setChatMessages((prev) => [...prev, userMessage])
-    setReplyText('')
-
-    clearTimeout(autoReplyTimeoutRef.current)
-    autoReplyTimeoutRef.current = setTimeout(() => {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          sender: 'Rani Puspita',
-          role: 'Pelanggan',
-          text: 'Oke kak makasih infonya! 👍',
-          time: 'Baru saja',
-          isMe: false,
-        },
-      ])
-    }, 1500)
   }
 
   // Hitung baris layanan yang sedang dipilih di drawer Tambah Pesanan —
@@ -759,74 +766,13 @@ export default function OrderListView() {
                </div>
              </div>
 
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col justify-between gap-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-subtitle font-sans font-bold text-on-surface">
-                  Pesan Terbaru
-                </h3>
-                <button className="text-label-sm font-bold text-primary hover:underline cursor-pointer">
-                  Lihat semua
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-4 overflow-y-auto max-h-[190px] pr-1.5 custom-scrollbar">
-                {chatMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col gap-1.5 max-w-[85%] ${
-                      msg.isMe ? 'self-end items-end' : 'self-start items-start'
-                    }`}
-                  >
-                    {!msg.isMe && (
-                      <div className="flex items-center gap-2.5">
-                        <img
-                          src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"
-                          alt={msg.sender}
-                          className="w-7 h-7 rounded-full object-cover"
-                        />
-                        <div className="flex flex-col">
-                          <span className="text-label-sm font-bold text-on-surface">{msg.sender}</span>
-                          <span className="text-[10px] text-on-surface-variant font-medium leading-none">{msg.role}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div
-                      className={[
-                        'text-body-md p-3.5 rounded-2xl leading-relaxed',
-                        msg.isMe
-                          ? 'bg-primary text-on-primary rounded-tr-none text-right font-medium'
-                          : 'bg-surface-container/60 text-on-surface rounded-tl-none font-medium',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      {msg.text}
-                    </div>
-                    <span className="text-[10px] text-on-surface-variant/70 font-medium px-1">
-                      {msg.time}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <form onSubmit={handleSendReply} className="flex items-center justify-between border border-outline-variant rounded-xl p-1.5 bg-surface-container-lowest focus-within:border-primary transition-all duration-200 shadow-inner">
-                <input
-                  type="text"
-                  placeholder="Balas sekarang..."
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  className="flex-1 bg-transparent outline-none px-2.5 text-body-md text-on-surface placeholder:text-on-surface-variant/60"
-                />
-                <button
-                  type="submit"
-                  className="text-primary hover:bg-primary-container p-2 rounded-lg transition-colors cursor-pointer shrink-0"
-                  aria-label="Kirim balasan"
-                >
-                  <Icon name="send" size={18} />
-                </button>
-              </form>
-            </div>
+            {/* Pesan Cepat — sesuai spek Figma, cuma nampilin satu percakapan
+                unggulan + tombol Jawab, bukan list scroll */}
+            <PesanCepatCard
+              conversation={featuredConversation}
+              onLihatSemua={() => openQuickChat(conversations[0]?.id)}
+              onJawab={() => openQuickChat(featuredConversation?.id)}
+            />
 
             <button
               onClick={() => setIsAddDrawerOpen(true)}
@@ -1031,6 +977,16 @@ export default function OrderListView() {
         onClose={() => setEditStatusOrderId(null)}
         order={editStatusOrderDetail}
         onUpdateStatus={(statusKey) => handleUpdateStatus(editStatusOrderId, statusKey)}
+      />
+
+      <QuickChatModal
+        open={isQuickChatOpen}
+        onClose={() => setIsQuickChatOpen(false)}
+        conversations={conversations}
+        activeConversationId={activeChatId}
+        onSelectConversation={setActiveChatId}
+        activeConversation={activeConversation}
+        onSendReply={handleSendReply}
       />
     </PageShell>
   )
