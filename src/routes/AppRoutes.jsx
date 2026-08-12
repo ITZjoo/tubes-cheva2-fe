@@ -8,6 +8,11 @@ import OrderListView from '../modules/orders/views/OrderListView'
 import OrderDetailView from '../modules/orders/views/OrderDetailView'
 import HistoryView from '../modules/history/views/HistoryView'
 import NotifikasiView from '../modules/notifikasi/views/NotifikasiView'
+import PengaturanView from '../modules/pengaturan/views/PengaturanView'
+import EditProfilAkunView from '../modules/pengaturan/views/EditProfilAkunView'
+import EditProfilLaundryView from '../modules/pengaturan/views/EditProfilLaundryView'
+import PengaturanNotifikasiView from '../modules/pengaturan/views/PengaturanNotifikasiView'
+import PengaturanPembayaranView from '../modules/pengaturan/views/PengaturanPembayaranView'
 import NotFoundView from '../modules/errors/views/NotFoundView'
 import AccessDeniedView from '../modules/errors/views/AccessDeniedView'
 import ServerErrorView from '../modules/errors/views/ServerErrorView'
@@ -84,6 +89,47 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <NotifikasiView />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/pengaturan"
+        element={
+          <ProtectedRoute>
+            <PengaturanView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pengaturan/edit-akun"
+        element={
+          <ProtectedRoute>
+            <EditProfilAkunView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pengaturan/edit-laundry"
+        element={
+          <ProtectedRoute>
+            <EditProfilLaundryView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pengaturan/notifikasi"
+        element={
+          <ProtectedRoute>
+            <PengaturanNotifikasiView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pengaturan/pembayaran"
+        element={
+          <ProtectedRoute>
+            <PengaturanPembayaranView />
           </ProtectedRoute>
         }
       />

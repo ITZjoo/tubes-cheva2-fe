@@ -8,4 +8,5 @@ export const SIDEBAR_ROUTES = {
   layanan: '/products',
   history: '/history',
   notifikasi: '/notifikasi',
+  pengaturan: '/pengaturan',
 }
