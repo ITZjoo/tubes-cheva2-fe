@@ -8,6 +8,45 @@ This is a **report only** — no fixes have been applied. Each item lists what F
 
 ---
 
+## Page-by-page integration status (2026-08-12)
+
+Every routed FE page/view, whether it's actually wired to call its backend service, and whether the backend supports that call today. "Backend support" reflects `tubes-cheva2-be` on `main` as it actually is right now — it does **not** count the held/uncommitted settings work described below.
+
+| Page (route) | FE wired to a real API call? | Backend supports it? |
+|---|---|---|
+| Login (`/login`) | ✅ Yes — `POST /login` | ✅ Yes |
+| Register (`/register`) | ✅ Yes — `POST /register` | ⚠️ Route exists but requires `authenticate + adminOnly` — unusable as public sign-up (Critical #1) |
+| Dashboard (`/dashboard`) | ✅ Yes — stats, recent-orders, revenue-chart | ✅ Yes |
+| Layanan/Products (`/products`, `/products/new`, `/products/:id/edit`) | ✅ Yes — full CRUD | ✅ Yes |
+| Pesanan/Orders list (`/orders`) | ✅ Yes — list, create, status-advance | ✅ Yes |
+| Order detail (`/orders/:id`) | ❌ No — literal `// TODO: replace with orderService.getOrder(id)` in the code | ✅ Yes — `GET /api/orders/:id` already exists; this is a pure FE gap |
+| History (`/history`) | ✅ Yes (calls `GET /history`) | ❌ No — route doesn't exist anywhere on the backend (Critical #2) |
+| Notifikasi (`/notifikasi`) | ❌ No — `notifikasiService.js` exists but is never called; page runs on local/mock state | ❌ No — backend only has customer-facing notification routes, no staff-facing shape (Critical #4) |
+| Chat (`Chatview.jsx`) | ❌ No — 100% mocked, no service file | ❌ No — not even routed in `AppRoutes.jsx`; no Message model or chat routes exist on the backend at all |
+| Pendapatan (sidebar item) | ❌ No — no page/module exists at all, sidebar entry is a dead click | ✅ Backend already has what it'd need — `revenue-chart`, `transactions/report/daily`+`monthly`, `expenses`/`expenses/summary` — just unused |
+| Pengaturan menu (`/pengaturan`) | N/A — static navigation list, no data to fetch | N/A |
+| Edit Profil Akun (`/pengaturan/akun`) | ✅ Yes — `PATCH /me`, `PUT /me/password` | 🔶 Written but **held/uncommitted** in `tubes-cheva2-be` (see below) — not part of the live backend yet |
+| Edit Profil Laundry (`/pengaturan/laundry`) | ❌ No — still the generic `SettingsPlaceholderView` stub | 🔶 Written but held/uncommitted (`/api/laundry-profile`) |
+| Pengaturan Notifikasi (`/pengaturan/notifikasi`) | ❌ No — still `SettingsPlaceholderView` | 🔶 Written but held/uncommitted (`/api/notification-preferences`) |
+| Pengaturan Pembayaran (`/pengaturan/pembayaran`) | ❌ No — still `SettingsPlaceholderView` | 🔶 Written but held/uncommitted (`/api/payment-settings`) |
+
+**Summary**: 5 pages fully wired and correct end-to-end. 2 wired on the FE side but broken by a backend mismatch (Register, History). 1 has working backend but missing FE wiring (Order detail). 1 has working backend but no FE page at all (Pendapatan). 4 have zero integration on either side today (Notifikasi, Chat, and 2 of the 3 remaining settings sub-pages — Edit Profil Akun's FE side is done, just blocked on the backend).
+
+### Held backend work (2026-08-12)
+
+Backend endpoints for all 4 Pengaturan pages were designed and implemented in `tubes-cheva2-be` on branch `imam/api`, following the codebase's existing conventions exactly (thin controller → service → Prisma, Zod `validate()` middleware, `response.js` envelope helpers, `Object.assign(new Error(...), {statusCode})` error pattern):
+
+- `PATCH /api/me` + `PUT /api/me/password` — self-service profile/password for staff/admin (`auth.routes.js`, no schema change needed).
+- `GET`/`PATCH /api/laundry-profile` — new `LaundryProfile` singleton model (name, address, phone, email, description).
+- `GET`/`PATCH /api/notification-preferences` — new `NotificationPreference` model, one row per `User` (`allNotifications`, `newOrder`, `paymentConfirmed`, `customerChat` booleans, matching the toggle switches on the Pengaturan Notifikasi mockup).
+- `GET`/`PATCH /api/payment-settings` — new `PaymentSettings` singleton model (accepted payment methods + bank/QRIS receiving details).
+
+A hand-written migration (`prisma/migrations/20260812120000_add_settings_models/`) matching the project's existing SQL style is included for the 3 new tables. `prisma validate`, `prisma generate`, `eslint`, and a full `require()` load-check all pass clean.
+
+**This work is currently paused, uncommitted, in the working directory of `tubes-cheva2-be`** — not committed, not merged, and the migration has **not** been applied to the (shared, Supabase-hosted) database. It needs an explicit go-ahead before committing and before running the migration against live data.
+
+---
+
 ## Critical — breaks a whole page/flow
 
 ### 1. Public registration hits an admin-only endpoint
