@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Typography from '../../../components/ui/Typography'
-import { DatePickerPopover } from '../../../components/ui/DatePicker'
+import Icon from '../../../components/ui/Icon'
+import DatePicker from '../../../components/ui/DatePicker'
+import TeleportPanel from '../../../components/ui/TeleportPanel'
 import SearchMenuPopover from '../../../components/ui/SearchMenuPopover'
 import FilterPopover from '../../../components/ui/FilterPopover'
 import Sidebar from '../../../components/ui/Sidebar'
@@ -15,6 +17,12 @@ export default function HistoryView() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDate, setSelectedDate] = useState(null)
   const [filters, setFilters] = useState({ statuses: [], services: [] })
+
+  // DatePicker nggak punya wrapper popover sendiri (cuma DatePicker.jsx +
+  // index.js) — jadi dibungkus TeleportPanel, pola yang sama kayak di
+  // DashboardView.jsx / OrderListView.jsx.
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const dateButtonRef = useRef(null)
 
   const [historyItems, setHistoryItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -76,7 +84,30 @@ export default function HistoryView() {
               onChange={setSearchQuery}
               onSelectOrder={(order) => setSearchQuery(order.id)}
             />
-            <DatePickerPopover value={selectedDate} onChange={setSelectedDate} placeholder="Pilih periode" />
+
+            <button
+              ref={dateButtonRef}
+              type="button"
+              onClick={() => setDatePickerOpen((prev) => !prev)}
+              className="bg-surface-container-lowest border border-outline-variant px-4 py-2.5 rounded-xl text-label-sm font-bold flex items-center gap-2.5 hover:bg-surface-container transition-all shadow-sm text-on-surface hover:scale-[1.02] cursor-pointer"
+            >
+              <Icon name="calendar_today" size={18} className="text-primary" />
+              <span>
+                {selectedDate
+                  ? selectedDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+                  : 'Pilih periode'}
+              </span>
+            </button>
+
+            <TeleportPanel anchorRef={dateButtonRef} open={datePickerOpen} onClose={() => setDatePickerOpen(false)}>
+              <DatePicker
+                value={selectedDate}
+                onChange={(date) => {
+                  setSelectedDate(date)
+                  setDatePickerOpen(false)
+                }}
+              />
+            </TeleportPanel>
           </div>
 
           <FilterPopover onApply={setFilters} />
