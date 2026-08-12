@@ -39,6 +39,7 @@ const Input = forwardRef(function Input(
     startIcon,
     showClear = false,
     onClear,
+    endAdornment,
     disabled = false,
     id,
     className = '',
@@ -68,6 +69,8 @@ const Input = forwardRef(function Input(
   const showTrailingClear = showClear && hasValue && !disabled && !error
   const trailingIcon = error ? (
     <Icon name="error" size={20} filled className="shrink-0 text-error" />
+  ) : endAdornment ? (
+    endAdornment
   ) : showTrailingClear ? (
     <button
       type="button"
