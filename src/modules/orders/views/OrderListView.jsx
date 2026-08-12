@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Icon from '../../../components/ui/Icon'
 import PageShell from '../../../components/ui/PageShell'
 import StatusBadge from '../../../components/ui/StatusBadge'
@@ -151,6 +152,7 @@ function mapOrderToDisplay(order) {
 }
 
 export default function OrderListView() {
+  const navigate = useNavigate()
   const handleSidebarNavigate = useSidebarNavigate()
 
   const [orders, setOrders] = useState([])
@@ -602,8 +604,11 @@ export default function OrderListView() {
                     </div>
 
                     <div className="flex items-center justify-between mt-1">
-                      <button className="text-label-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-0 outline-none">
-                        Lihat Receipt
+                      <button
+                        onClick={() => navigate(`/orders/${order.beId}`)}
+                        className="text-label-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-0 outline-none"
+                      >
+                        Lihat Detail
                       </button>
 
                       <button
