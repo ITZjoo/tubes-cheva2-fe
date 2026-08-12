@@ -4,6 +4,8 @@ import PageShell from '../../../components/ui/PageShell'
 import TeleportPanel from '../../../components/ui/TeleportPanel'
 import DatePicker from '../../../components/ui/DatePicker'
 import RevenueChart from '../../../components/ui/Chart/RevenueChart'
+import QuickChatModal from '../../chat/components/QuickChatModal'
+import PesanCepatCard from '../../chat/components/PesanCepatCard'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import * as dashboardService from '../services/dashboardService'
 import * as orderService from '../../orders/services/orderService'
@@ -31,21 +33,60 @@ const STATUS_BADGE_CLASS = {
   dibatalkan: 'bg-error-container/40 text-on-error-container border-error/10',
 }
 
+// TODO: ganti dengan chatService begitu backend punya endpoint/model Message.
+// Bentuk data ini yang dipakai bareng oleh QuickChatModal (lihat
+// src/modules/chat/components).
+const INITIAL_CONVERSATIONS = [
+  {
+    id: 1,
+    name: 'Rani Puspita',
+    role: 'Pelanggan',
+    time: '10 menit lalu',
+    lastMessage: 'Kapan pesanan saya selesai ?',
+    replied: false,
+    trxId: 'TRX/0023400501',
+    date: '22 Juni 2026',
+    question: 'Kapan pesanan saya selesai ?',
+    questionTime: '10 menit lalu',
+  },
+  {
+    id: 2,
+    name: 'Alberto',
+    role: 'Pelanggan',
+    time: '15 menit lalu',
+    lastMessage: 'Apakah sudah bisa diambil ?',
+    replied: false,
+    trxId: 'TRX/0023300502',
+    date: '22 Juni 2026',
+    question: 'Apakah sudah bisa diambil ?',
+    questionTime: '15 menit lalu',
+  },
+]
+
 function formatRupiah(amount) {
   return `Rp. ${(amount ?? 0).toLocaleString('id-ID')}`
+}
+
+// Format Date -> 'YYYY-MM-DD' pakai komponen tanggal LOKAL (bukan UTC).
+// Backend revenue-chart mengembalikan entry.date dalam tanggal lokal, jadi
+// kalau kita bandingkan pakai now.toISOString() (yang UTC), antara jam
+// 00.00–06.59 WIB "hari ini" versi UTC masih menunjuk ke tanggal kemarin —
+// akibatnya todayEntry gagal ketemu dan pemasukan hari ini muncul sebagai 0.
+function toLocalDateString(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 // Backend revenue-chart only returns one month's worth of {date, revenue}
 // (no expense tracking exists at all, and no hourly granularity) — build the
 // closest approximation of the today/week/month tabs RevenueChart expects.
 function buildChartData(dailyRevenue, todayRevenue) {
-  const today = {
-    label: 'Hari ini',
-    entries: [
-      { label: '00.00', income: 0, expense: 0 },
-      { label: 'Sekarang', income: todayRevenue, expense: 0 },
-    ],
-  }
+  const today = [
+    { label: '00.00', income: 0, expense: 0 },
+    { label: 'Sekarang', income: todayRevenue, expense: 0 },
+  ]
 
   const last7 = dailyRevenue.slice(-7)
   const week = last7.map((entry) => ({
@@ -61,7 +102,7 @@ function buildChartData(dailyRevenue, todayRevenue) {
   })
   const month = weekBuckets.map((sum, idx) => ({ label: `Week ${idx + 1}`, income: sum, expense: 0 }))
 
-  return { today: today.entries, week, month }
+  return { today, week, month }
 }
 
 export default function DashboardView() {
@@ -96,12 +137,19 @@ export default function DashboardView() {
         ])
         if (cancelled) return
 
-        setStats(statsRes)
-        setRecentOrders(recentRes)
+        // dashboardService.getRecentOrders / getRevenueChart bisa jadi
+        // mengembalikan response yang dibungkus (mis. { data: [...] })
+        // alih-alih array langsung — sama seperti listOrders. Unwrap dulu
+        // biar .find()/.map() di bawah nggak meledak.
+        const recentOrdersArr = Array.isArray(recentRes) ? recentRes : (recentRes?.data ?? [])
+        const chartResArr = Array.isArray(chartRes) ? chartRes : (chartRes?.data ?? [])
 
-        const todayStr = now.toISOString().slice(0, 10)
-        const todayEntry = chartRes.find((entry) => entry.date === todayStr)
-        setChartData(buildChartData(chartRes, todayEntry?.revenue ?? 0))
+        setStats(statsRes)
+        setRecentOrders(recentOrdersArr)
+
+        const todayStr = toLocalDateString(now)
+        const todayEntry = chartResArr.find((entry) => entry.date === todayStr)
+        setChartData(buildChartData(chartResArr, todayEntry?.revenue ?? 0))
 
         const counts = {}
         ordersRes.data.forEach((order) => {
@@ -122,55 +170,29 @@ export default function DashboardView() {
     }
   }, [])
 
-  // State untuk chat interaktif di dashboard — tidak ada endpoint chat di
-  // backend (tidak ada model Message), jadi tetap simulasi lokal seperti semula.
-  const [chatMessages, setChatMessages] = useState([
-    {
-      id: 1,
-      sender: 'Rani Puspita',
-      role: 'Pelanggan',
-      text: 'Ka, kira kira kapan yah baju aku selesai ?...',
-      time: 'Baru saja',
-      isMe: false,
-    },
-  ])
-  const [replyText, setReplyText] = useState('')
-  const autoReplyTimeoutRef = useRef(null)
+  // QuickChat: daftar percakapan + overlay. Sama seperti chartData/orders,
+  // ini idealnya ditarik dari service begitu backend punya model Message —
+  // untuk sekarang pakai data contoh (INITIAL_CONVERSATIONS di atas).
+  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS)
+  const [activeChatId, setActiveChatId] = useState(INITIAL_CONVERSATIONS[0]?.id ?? null)
+  const [isQuickChatOpen, setIsQuickChatOpen] = useState(false)
 
-  useEffect(() => {
-    return () => clearTimeout(autoReplyTimeoutRef.current)
-  }, [])
+  const activeConversation = conversations.find((c) => c.id === activeChatId) ?? null
+  // Widget "Pesan Cepat" cuma nampilin satu preview — prioritaskan yang
+  // belum dibalas, fallback ke yang pertama.
+  const featuredConversation = conversations.find((c) => !c.replied) ?? conversations[0] ?? null
 
-  const handleSendReply = (e) => {
-    e.preventDefault()
-    if (!replyText.trim()) return
+  const openQuickChat = (conversationId) => {
+    setActiveChatId(conversationId)
+    setIsQuickChatOpen(true)
+  }
 
-    const userMessage = {
-      id: crypto.randomUUID(),
-      sender: 'Utama Laundry',
-      role: 'Owner',
-      text: replyText,
-      time: 'Baru saja',
-      isMe: true,
-    }
-
-    setChatMessages((prev) => [...prev, userMessage])
-    setReplyText('')
-
-    clearTimeout(autoReplyTimeoutRef.current)
-    autoReplyTimeoutRef.current = setTimeout(() => {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          sender: 'Rani Puspita',
-          role: 'Pelanggan',
-          text: 'Oke kak makasih infonya! 👍',
-          time: 'Baru saja',
-          isMe: false,
-        },
-      ])
-    }, 1500)
+  const handleSendReply = (conversationId, replyText) => {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conversationId ? { ...c, replied: true } : c))
+    )
+    // TODO: kirim ke backend begitu endpoint chat tersedia.
+    console.log('Kirim balasan ke', conversationId, ':', replyText)
   }
 
   const toggleShopStatus = () => {
@@ -213,7 +235,7 @@ export default function DashboardView() {
           {/* 2. Subheader Area: Subtitle (Left) & Actions: Date Picker + Shop Status (Right) */}
           <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant/35 pb-4">
             <p className="text-body-md text-on-surface-variant font-medium">
-              Berikut rikasan operasional laundry hari ini.
+              Berikut ringkasan operasional laundry hari ini.
             </p>
 
             <div className="flex items-center gap-3">
@@ -405,77 +427,23 @@ export default function DashboardView() {
               </div>
             </div>
 
-            {/* Right: Recent Chat Card */}
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col justify-between gap-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-subtitle font-sans font-bold text-on-surface">
-                  Pesan Terbaru
-                </h3>
-                <button className="text-label-sm font-bold text-primary hover:underline cursor-pointer">
-                  Lihat semua
-                </button>
-              </div>
-
-              <div className="flex-1 flex flex-col gap-4 overflow-y-auto max-h-[190px] pr-1.5 custom-scrollbar">
-                {chatMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col gap-1.5 max-w-[85%] ${
-                      msg.isMe ? 'self-end items-end' : 'self-start items-start'
-                    }`}
-                  >
-                    {!msg.isMe && (
-                      <div className="flex items-center gap-2.5">
-                        <img
-                          src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"
-                          alt={msg.sender}
-                          className="w-7 h-7 rounded-full object-cover"
-                        />
-                        <div className="flex flex-col">
-                          <span className="text-label-sm font-bold text-on-surface">{msg.sender}</span>
-                          <span className="text-[10px] text-on-surface-variant font-medium leading-none">{msg.role}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div
-                      className={[
-                        'text-body-md p-3.5 rounded-2xl leading-relaxed',
-                        msg.isMe
-                          ? 'bg-primary text-on-primary rounded-tr-none text-right font-medium'
-                          : 'bg-surface-container/60 text-on-surface rounded-tl-none font-medium',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      {msg.text}
-                    </div>
-                    <span className="text-[10px] text-on-surface-variant/70 font-medium px-1">
-                      {msg.time}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <form onSubmit={handleSendReply} className="flex items-center justify-between border border-outline-variant rounded-xl p-1.5 bg-surface-container-lowest focus-within:border-primary transition-all duration-200 shadow-inner">
-                <input
-                  type="text"
-                  placeholder="Balas sekarang..."
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  className="flex-1 bg-transparent outline-none px-2.5 text-body-md text-on-surface placeholder:text-on-surface-variant/60"
-                />
-                <button
-                  type="submit"
-                  className="text-primary hover:bg-primary-container p-2 rounded-lg transition-colors cursor-pointer shrink-0"
-                  aria-label="Kirim balasan"
-                >
-                  <Icon name="send" size={18} />
-                </button>
-              </form>
-            </div>
+            <PesanCepatCard
+              conversation={featuredConversation}
+              onLihatSemua={() => openQuickChat(conversations[0]?.id)}
+              onJawab={() => openQuickChat(featuredConversation?.id)}
+            />
           </section>
         </div>
+
+        <QuickChatModal
+          open={isQuickChatOpen}
+          onClose={() => setIsQuickChatOpen(false)}
+          conversations={conversations}
+          activeConversationId={activeChatId}
+          onSelectConversation={setActiveChatId}
+          activeConversation={activeConversation}
+          onSendReply={handleSendReply}
+        />
     </PageShell>
   )
 }
