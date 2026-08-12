@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import Icon from '../../../components/ui/Icon'
 import PageShell from '../../../components/ui/PageShell'
 import StatusBadge from '../../../components/ui/StatusBadge'
@@ -9,6 +8,7 @@ import Drawer from '../../../components/ui/Drawer'
 import FilterDrawer from '../../../components/ui/FilterDrawer'
 import EditStatusDrawer from '../../../components/ui/EditStatusDrawer'
 import TeleportPanel from '../../../components/ui/TeleportPanel'
+import OrderDetailModal from '../components/OrderDetailModal'
 import QuickChatModal from '../../chat/components/QuickChatModal'
 import PesanCepatCard from '../../chat/components/PesanCepatCard'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
@@ -152,8 +152,8 @@ function mapOrderToDisplay(order) {
 }
 
 export default function OrderListView() {
-  const navigate = useNavigate()
   const handleSidebarNavigate = useSidebarNavigate()
+  const [selectedOrderId, setSelectedOrderId] = useState(null)
 
   const [orders, setOrders] = useState([])
   const [ordersLoading, setOrdersLoading] = useState(true)
@@ -605,7 +605,7 @@ export default function OrderListView() {
 
                     <div className="flex items-center justify-between mt-1">
                       <button
-                        onClick={() => navigate(`/orders/${order.beId}`)}
+                        onClick={() => setSelectedOrderId(order.beId)}
                         className="text-label-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-0 outline-none"
                       >
                         Lihat Detail
@@ -983,6 +983,8 @@ export default function OrderListView() {
         order={editStatusOrderDetail}
         onUpdateStatus={(statusKey) => handleUpdateStatus(editStatusOrderId, statusKey)}
       />
+
+      <OrderDetailModal orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />
 
       <QuickChatModal
         open={isQuickChatOpen}
