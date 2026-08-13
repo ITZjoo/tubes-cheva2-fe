@@ -8,6 +8,7 @@ import ProductFormView from '../modules/products/views/ProductFormView'
 import OrderListView from '../modules/orders/views/OrderListView'
 import HistoryView from '../modules/history/views/HistoryView'
 import NotifikasiView from '../modules/notifikasi/views/NotifikasiView'
+import PendapatanView from '../modules/pendapatan/views/PendapatanView'
 import PengaturanView from '../modules/settings/views/PengaturanView'
 import EditProfilAkunView from '../modules/settings/views/EditProfilAkunView'
 import EditProfilLaundryView from '../modules/settings/views/EditProfilLaundryView'
@@ -93,6 +94,15 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <NotifikasiView />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/pendapatan"
+        element={
+          <ProtectedRoute>
+            <PendapatanView />
           </ProtectedRoute>
         }
       />
