@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import Checkbox from '../../../components/ui/Checkbox'
 import Icon from '../../../components/ui/Icon'
-import Sidebar from '../../../components/ui/Sidebar'
+import PageShell from '../../../components/ui/PageShell'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import NotificationItem from '../component/NotificationItem'
 import NotifikasiEmptyState from '../component/NotifikasiEmptyState'
@@ -94,10 +94,11 @@ export default function NotifikasiView({ initialNotifications = INITIAL_NOTIFICA
   }
 
   return (
-    <div className="flex min-h-screen bg-surface">
-      <Sidebar activeItemId="notifikasi" onItemClick={handleSidebarNavigate} />
-
-      <main className="flex-1 overflow-x-hidden p-6 md:p-8 font-body max-w-[1400px] mx-auto flex flex-col gap-6">
+    <PageShell
+      activeItemId="notifikasi"
+      onItemClick={handleSidebarNavigate}
+      mainClassName="p-6 md:p-8 font-body max-w-[1400px] mx-auto flex flex-col gap-6"
+    >
         <div>
           <h2 className="font-sans font-bold text-[32px] leading-[40px] tracking-[-0.01em] text-black">
             Notifikasi
@@ -170,7 +171,6 @@ export default function NotifikasiView({ initialNotifications = INITIAL_NOTIFICA
             </div>
           )}
         </div>
-      </main>
-    </div>
+    </PageShell>
   )
 }
