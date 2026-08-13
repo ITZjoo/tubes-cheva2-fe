@@ -8,6 +8,7 @@ import Drawer from '../../../components/ui/Drawer'
 import FilterDrawer from '../../../components/ui/FilterDrawer'
 import EditStatusDrawer from '../../../components/ui/EditStatusDrawer'
 import TeleportPanel from '../../../components/ui/TeleportPanel'
+import OrderDetailModal from '../components/OrderDetailModal'
 import QuickChatModal from '../../chat/components/QuickChatModal'
 import PesanCepatCard from '../../chat/components/PesanCepatCard'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
@@ -152,6 +153,7 @@ function mapOrderToDisplay(order) {
 
 export default function OrderListView() {
   const handleSidebarNavigate = useSidebarNavigate()
+  const [selectedOrderId, setSelectedOrderId] = useState(null)
 
   const [orders, setOrders] = useState([])
   const [ordersLoading, setOrdersLoading] = useState(true)
@@ -602,8 +604,11 @@ export default function OrderListView() {
                     </div>
 
                     <div className="flex items-center justify-between mt-1">
-                      <button className="text-label-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-0 outline-none">
-                        Lihat Receipt
+                      <button
+                        onClick={() => setSelectedOrderId(order.beId)}
+                        className="text-label-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-0 outline-none"
+                      >
+                        Lihat Detail
                       </button>
 
                       <button
@@ -978,6 +983,8 @@ export default function OrderListView() {
         order={editStatusOrderDetail}
         onUpdateStatus={(statusKey) => handleUpdateStatus(editStatusOrderId, statusKey)}
       />
+
+      <OrderDetailModal orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />
 
       <QuickChatModal
         open={isQuickChatOpen}

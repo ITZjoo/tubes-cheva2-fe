@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Typography from '../../../components/ui/Typography'
 import Icon from '../../../components/ui/Icon'
-import HistoryDetailCard from './HistoryDetailCard'
+import OrderDetailModal from '../../../components/ui/OrderDetailModal'
 
 // Renders the "Status berubah: X → Y" (order status change) or
 // "Status berubah: X" (single-value change, e.g. price/service edits) line.
@@ -31,10 +31,9 @@ export default function HistoryListItem({
   changeFrom,
   changeTo,
   detail,
-  defaultExpanded = false,
   className = '',
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
 
   return (
     <div className={['flex flex-col', className].filter(Boolean).join(' ')}>
@@ -66,18 +65,14 @@ export default function HistoryListItem({
 
         <button
           type="button"
-          onClick={() => setExpanded((prev) => !prev)}
+          onClick={() => setIsDetailOpen(true)}
           className="flex h-[42px] w-24 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-[#89D0ED] bg-primary-container px-3 text-label-sm font-medium text-primary transition-colors hover:brightness-95"
         >
-          {expanded ? 'Tutup' : 'Lihat Detail'}
+          Lihat Detail
         </button>
       </div>
 
-      {expanded && detail && (
-        <div className="px-[18px] pb-3">
-          <HistoryDetailCard {...detail} />
-        </div>
-      )}
+      {detail && <OrderDetailModal open={isDetailOpen} onClose={() => setIsDetailOpen(false)} {...detail} />}
     </div>
   )
 }

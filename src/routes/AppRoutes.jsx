@@ -5,7 +5,6 @@ import DashboardView from '../modules/dashboard/views/DashboardView'
 import ProductListView from '../modules/products/views/ProductListView'
 import ProductFormView from '../modules/products/views/ProductFormView'
 import OrderListView from '../modules/orders/views/OrderListView'
-import OrderDetailView from '../modules/orders/views/OrderDetailView'
 import HistoryView from '../modules/history/views/HistoryView'
 import NotifikasiView from '../modules/notifikasi/views/NotifikasiView'
 import SettingsView from '../modules/settings/views/SettingsView'
@@ -63,14 +62,6 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <OrderListView />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/orders/:id"
-        element={
-          <ProtectedRoute>
-            <OrderDetailView />
           </ProtectedRoute>
         }
       />
