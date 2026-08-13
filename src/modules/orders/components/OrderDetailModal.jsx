@@ -3,13 +3,7 @@ import SharedOrderDetailModal from '../../../components/ui/OrderDetailModal'
 import { STATUS_TONES } from '../../../components/ui/StatusBadge'
 import * as orderService from '../services/orderService'
 import { BE_TO_FE } from '../utils/orderStatus'
-
-const PAYMENT_METHOD_LABEL = {
-  CASH: 'Tunai',
-  QRIS: 'QRIS',
-  TRANSFER: 'Transfer Bank',
-  EWALLET: 'E-Wallet',
-}
+import { PAYMENT_METHOD_LABEL } from '../../../constants/paymentMethod'
 
 function formatDate(iso) {
   if (!iso) return '-'

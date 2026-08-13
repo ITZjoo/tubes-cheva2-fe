@@ -90,6 +90,8 @@ function RevenueTooltip({ active, payload, label }) {
  *   onPeriodChange?: (period: string) => void,
  *   incomeLabel?: string,
  *   expenseLabel?: string,
+ *   title?: string,
+ *   showTabs?: boolean,
  *   className?: string,
  * }} props
  */
@@ -100,6 +102,8 @@ export default function RevenueChart({
   onPeriodChange,
   incomeLabel = 'Pemasukan Hari Ini',
   expenseLabel = 'Pengeluaran Kemarin',
+  title = 'Ringkasan Pendapatan',
+  showTabs = true,
   className = '',
 }) {
   const [internalPeriod, setInternalPeriod] = useState(defaultPeriod)
@@ -125,9 +129,10 @@ export default function RevenueChart({
     >
       <div className="mb-4 flex shrink-0 items-center justify-between gap-4">
         <Typography variant="label-lg" as="h3" className="leading-[140%]">
-          Ringkasan Pendapatan
+          {title}
         </Typography>
 
+        {showTabs && (
         <div
           role="tablist"
           aria-label="Rentang waktu ringkasan pendapatan"
@@ -174,6 +179,7 @@ export default function RevenueChart({
             )
           })}
         </div>
+        )}
       </div>
 
       <div className="min-h-0 w-full flex-1">
