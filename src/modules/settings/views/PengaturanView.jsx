@@ -34,7 +34,10 @@ export default function PengaturanView() {
   }
 
   return (
-    <div className="flex min-h-screen bg-surface-container-low">
+    // h-screen + overflow-hidden: kunci tinggi wrapper ke viewport supaya
+    // Sidebar (h-screen) gak ikut ke-scroll saat konten kanan lebih panjang
+    // dari layar — cuma div konten yang scroll internal (overflow-y-auto).
+    <div className="flex h-screen overflow-hidden bg-surface-container-low">
       <Sidebar activeItemId="pengaturan" onItemClick={handleSidebarItemClick} onLogout={handleLogout} />
 
       <div className="flex-1 overflow-y-auto p-8">
