@@ -77,9 +77,9 @@ export default function DatePicker({ mode = 'single', value = null, onChange, de
 
   return (
     <div
-      className={['w-[369px] rounded-lg bg-surface-container-lowest p-6 shadow-lg', className]
-        .filter(Boolean)
-        .join(' ')}
+      className={['w-[min(369px,calc(100vw-32px))] rounded-lg bg-surface-container-lowest p-6 shadow-lg', className]
+      .filter(Boolean)
+      .join(' ')}
     >
       <div className="mb-6 flex items-center justify-between">
         <span className="text-subtitle capitalize text-primary">{monthLabel}</span>
