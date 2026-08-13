@@ -151,12 +151,13 @@ export default function DashboardView() {
         const todayEntry = chartResArr.find((entry) => entry.date === todayStr)
         setChartData(buildChartData(chartResArr, todayEntry?.revenue ?? 0))
 
+        const ordersArr = Array.isArray(ordersRes) ? ordersRes : (ordersRes?.data ?? [])
         const counts = {}
-        ordersRes.data.forEach((order) => {
-          const feStatus = BE_TO_FE[order.status]
-          counts[feStatus] = (counts[feStatus] ?? 0) + 1
+        ordersArr.forEach((order) => {
+        const feStatus = BE_TO_FE[order.status]
+        counts[feStatus] = (counts[feStatus] ?? 0) + 1
         })
-        setStatusCounts(counts)
+setStatusCounts(counts)
       } catch (err) {
         console.error('Failed to load dashboard data', err)
       } finally {
