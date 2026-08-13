@@ -17,68 +17,9 @@ import * as customerService from '../../customers/services/customerService'
 import * as serviceService from '../../products/services/productService'
 import { BE_TO_FE } from '../utils/orderStatus'
 
-// 1. Ilustrasi SVG Kustom untuk Halaman Kosong Utama (Belum Ada Pesanan)
-const EmptyOrdersIllustration = () => (
-  <svg
-    viewBox="0 0 200 160"
-    xmlns="http://www.w3.org/2000/svg"
-    className="w-48 h-40 mx-auto transition-transform duration-300 hover:scale-105"
-  >
-    <ellipse cx="100" cy="140" rx="60" ry="6" fill="#eff5f6" />
-    <rect x="85" y="40" width="55" height="75" rx="4" fill="#ffffff" stroke="#171d1e" strokeWidth="2.5" />
-    <path d="M93 50 L115 50" stroke="#eff5f6" strokeWidth="3" strokeLinecap="round" />
-    <path d="M93 60 L132 60" stroke="#bfc8cc" strokeWidth="2.5" strokeLinecap="round" />
-    <path d="M93 70 L125 70" stroke="#bfc8cc" strokeWidth="2.5" strokeLinecap="round" />
-    <path d="M93 80 L132 80" stroke="#bfc8cc" strokeWidth="2.5" strokeLinecap="round" />
-    <path d="M93 90 L120 90" stroke="#bfc8cc" strokeWidth="2.5" strokeLinecap="round" />
-    <path d="M93 100 L128 100" stroke="#bfc8cc" strokeWidth="2.5" strokeLinecap="round" />
-    <path d="M102 40 L123 40 L120 34 L105 34 Z" fill="#171d1e" />
-    <circle cx="132" cy="46" r="9" fill="#0a6780" />
-    <path d="M132 42 L132 50 M128 46 L136 46" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
-    <rect x="75" y="80" width="10" height="25" rx="3" fill="#004d62" />
-    <rect x="68" y="98" width="6" height="12" fill="#ffdea4" />
-    <rect x="79" y="98" width="6" height="12" fill="#ffdea4" />
-    <rect x="65" y="110" width="10" height="4" rx="2" fill="#171d1e" />
-    <rect x="78" y="110" width="10" height="4" rx="2" fill="#171d1e" />
-    <path d="M60 80 C60 65, 80 65, 80 80 Z" fill="#0a6780" />
-    <circle cx="70" cy="58" r="10" fill="#ffdea4" />
-    <path d="M60 55 C60 48, 80 48, 80 55 C74 54, 66 54, 60 55 Z" fill="#171d1e" />
-    <path d="M52 74 C56 78, 62 82, 68 83" stroke="#ffdea4" strokeWidth="3" strokeLinecap="round" />
-    <path d="M84 76 C87 78, 92 78, 95 78" stroke="#ffdea4" strokeWidth="3" strokeLinecap="round" />
-  </svg>
-)
-
-// 2. Ilustrasi SVG Kustom untuk Halaman Filter Kosong
-const EmptyFilterIllustration = () => (
-  <svg
-    viewBox="0 0 200 160"
-    xmlns="http://www.w3.org/2000/svg"
-    className="w-48 h-40 mx-auto transition-transform duration-300 hover:scale-105"
-  >
-    <ellipse cx="100" cy="140" rx="60" ry="6" fill="#eff5f6" />
-    <path
-      d="M75 50 L135 50 C138 50, 140 52, 140 55 L140 120 C140 123, 138 125, 135 125 L75 125 C72 125, 70 123, 70 120 L70 55 C70 52, 72 50, 75 50 Z"
-      fill="#ffffff"
-      stroke="#bfc8cc"
-      strokeWidth="1.5"
-    />
-    <path d="M78 65 L110 65" stroke="#eff5f6" strokeWidth="3" strokeLinecap="round" />
-    <path d="M78 75 L130 75" stroke="#bfc8cc" strokeWidth="2" strokeLinecap="round" />
-    <path d="M78 85 L125 85" stroke="#bfc8cc" strokeWidth="2" strokeLinecap="round" />
-    <path d="M78 95 L130 95" stroke="#bfc8cc" strokeWidth="2" strokeLinecap="round" />
-    <path d="M78 105 L120 105" stroke="#bfc8cc" strokeWidth="2" strokeLinecap="round" />
-    <circle cx="128" cy="62" r="8" fill="#004d62" />
-    <path d="M128 58 L128 66 M124 62 L132 62" stroke="#ffffff" strokeWidth="1.8" strokeLinecap="round" />
-    <circle cx="95" cy="45" r="9" fill="#ffdea4" />
-    <path d="M85 40 C85 34, 105 34, 105 40 C98 38, 92 38, 85 40 Z" fill="#171d1e" />
-    <circle cx="95" cy="34" r="3.5" fill="#171d1e" />
-    <path d="M82 60 C82 50, 108 50, 108 60 Z" fill="#0a6780" />
-    <circle cx="80" cy="62" r="3.5" fill="#ffdea4" />
-    <circle cx="110" cy="62" r="3.5" fill="#ffdea4" />
-    <path d="M52 95 C45 90, 48 75, 55 80 C52 70, 60 72, 60 83" fill="#70787c" opacity="0.2" />
-    <path d="M148 95 C155 90, 152 75, 145 80 C148 70, 140 72, 140 83" fill="#70787c" opacity="0.2" />
-  </svg>
-)
+// Ilustrasi halaman kosong — sekarang pakai aset SVG asli, bukan inline SVG.
+import emptyPesananIllustration from '../../../assets/illustrations/empty-pesanan.svg'
+import emptyPesananFilterIllustration from '../../../assets/illustrations/empty-pesanan-filter.svg'
 
 const ORDERS_PER_PAGE = 3
 const ORDERS_FETCH_LIMIT = 200
@@ -624,14 +565,22 @@ export default function OrderListView() {
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-4">
-                {statusFilter || isPanelFilterActive ? <EmptyFilterIllustration /> : <EmptyOrdersIllustration />}
-                <div className="max-w-xs">
-                  <h4 className="text-subtitle font-sans font-extrabold text-primary">
+                <img
+                  src={statusFilter || isPanelFilterActive ? emptyPesananFilterIllustration : emptyPesananIllustration}
+                  alt={statusFilter || isPanelFilterActive ? 'Tidak ada pesanan yang cocok dengan filter' : 'Belum ada pesanan'}
+                  className="w-48 h-40 mx-auto transition-transform duration-300 hover:scale-105"
+                />
+                <div className="flex flex-col items-center gap-2">
+                  <h4
+                    className="font-sans font-bold text-[28px] leading-none tracking-[-0.02em] text-center text-primary max-w-[342px]"
+                  >
                     {statusFilter || isPanelFilterActive
                       ? `Belum Ada Pesanan Yang Cocok`
                       : 'Belum Ada Pesanan'}
                   </h4>
-                  <p className="text-body-sm text-on-surface-variant/80 mt-1.5 font-medium leading-relaxed">
+                  <p
+                    className="font-sans font-medium text-[24px] leading-none tracking-normal text-center text-outline max-w-[298px]"
+                  >
                     {statusFilter || isPanelFilterActive
                       ? 'Silahkan cek status pesanan atau filter yang lain dulu...'
                       : 'Silahkan tambah pesanan terlebih dahulu...'}
