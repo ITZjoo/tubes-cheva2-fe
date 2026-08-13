@@ -237,8 +237,8 @@ export default function PengaturanPembayaranView() {
 
   // QRIS
   const [qrisEnabled, setQrisEnabled] = useState(true)
-  const [namaMerchant, setNamaMerchant] = useState('')
-  const [nmid, setNmid] = useState('')
+  const [namaMerchant, setNamaMerchant] = useState('Utama Laundry')
+  const [nmid, setNmid] = useState('ID12345678901')
   const [qrisPreview, setQrisPreview] = useState(null)
 
   // Rekening Bank/Transfer
@@ -305,7 +305,7 @@ export default function PengaturanPembayaranView() {
   }
 
   return (
-    <div className="flex min-h-screen bg-surface-container-low">
+    <div className="flex h-screen overflow-hidden bg-surface-container-low">
       <Sidebar activeItemId="pengaturan" onItemClick={handleSidebarItemClick} onLogout={handleLogout} />
 
       <div className="flex-1 overflow-y-auto p-8">
@@ -377,6 +377,7 @@ export default function PengaturanPembayaranView() {
                         />
                       ) : (
                         <>
+                          <Icon name="upload" size={28} className="text-primary" />
                           <span className="font-body text-[13px]">Upload QRIS</span>
                         </>
                       )}

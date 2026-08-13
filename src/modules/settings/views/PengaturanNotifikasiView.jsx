@@ -63,7 +63,7 @@ export default function PengaturanNotifikasiView() {
   }
 
   return (
-    <div className="flex min-h-screen bg-surface-container-low">
+    <div className="flex h-screen overflow-hidden bg-surface-container-low">
       <Sidebar activeItemId="pengaturan" onItemClick={handleSidebarItemClick} onLogout={handleLogout} />
         <div className="flex-1 overflow-y-auto p-8">
         {/* Header: arrow + judul sejajar di satu baris */}
