@@ -15,7 +15,7 @@ export default function ProfilePhotoCard({ photoUrl, onPhotoChange }) {
   }
 
   return (
-    <div className="flex w-full max-w-[484px] flex-col items-center gap-2.5 rounded-[18px] bg-on-primary px-8 py-5 shadow-[0px_1px_8px_0px_#0000001A]">
+    <div className="flex h-[385px] w-[484px] shrink-0 flex-col items-center gap-2.5 rounded-[18px] bg-on-primary py-5 pl-[118px] pr-[118px] shadow-[0px_1px_8px_0px_#0000001A]">
       <Typography variant="label-lg" className="!text-[16px] !font-semibold !leading-[140%] text-black">
         Foto Profil
       </Typography>
