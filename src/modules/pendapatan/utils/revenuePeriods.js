@@ -42,7 +42,10 @@ export function getPreviousPeriodRange(period, reference = new Date()) {
   return getPeriodRange('month', new Date(reference.getFullYear(), reference.getMonth() - 1, 1))
 }
 
+// Defensive: if the API response ever comes back unwrapped/malformed, this
+// should degrade to "no data" instead of throwing during render.
 export function sumAmount(rows) {
+  if (!Array.isArray(rows)) return 0
   return rows.reduce((sum, row) => sum + (row.amount ?? 0), 0)
 }
 
@@ -59,6 +62,9 @@ const WEEK_DAY_LABELS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 // { label, income, expense }[] shape RevenueChart expects, so stat-card
 // totals and the chart are always derived from the same numbers.
 export function buildChartBucket(period, transactions, expenses, range) {
+  const safeTransactions = Array.isArray(transactions) ? transactions : []
+  const safeExpenses = Array.isArray(expenses) ? expenses : []
+
   if (period === 'today') {
     const buckets = Array.from({ length: 8 }, (_, i) => ({
       label: `${String(i * 3).padStart(2, '0')}.00`,
@@ -66,11 +72,11 @@ export function buildChartBucket(period, transactions, expenses, range) {
       expense: 0,
       hourStart: i * 3,
     }))
-    transactions.forEach((t) => {
+    safeTransactions.forEach((t) => {
       const hour = new Date(t.paidAt ?? t.createdAt).getHours()
       buckets[Math.min(7, Math.floor(hour / 3))].income += t.amount ?? 0
     })
-    expenses.forEach((e) => {
+    safeExpenses.forEach((e) => {
       const hour = new Date(e.spentAt).getHours()
       buckets[Math.min(7, Math.floor(hour / 3))].expense += e.amount ?? 0
     })
@@ -83,12 +89,12 @@ export function buildChartBucket(period, transactions, expenses, range) {
       const date = addDays(monday, i)
       return { label: WEEK_DAY_LABELS[date.getDay()], income: 0, expense: 0, dateStr: toDateStr(date) }
     })
-    transactions.forEach((t) => {
+    safeTransactions.forEach((t) => {
       const dateStr = toDateStr(new Date(t.paidAt ?? t.createdAt))
       const bucket = buckets.find((b) => b.dateStr === dateStr)
       if (bucket) bucket.income += t.amount ?? 0
     })
-    expenses.forEach((e) => {
+    safeExpenses.forEach((e) => {
       const dateStr = toDateStr(new Date(e.spentAt))
       const bucket = buckets.find((b) => b.dateStr === dateStr)
       if (bucket) bucket.expense += e.amount ?? 0
@@ -98,11 +104,11 @@ export function buildChartBucket(period, transactions, expenses, range) {
 
   // month — 4 week-of-month buckets, same grouping Dashboard already uses.
   const buckets = Array.from({ length: 4 }, (_, i) => ({ label: `Week ${i + 1}`, income: 0, expense: 0 }))
-  transactions.forEach((t) => {
+  safeTransactions.forEach((t) => {
     const day = new Date(t.paidAt ?? t.createdAt).getDate()
     buckets[Math.min(3, Math.floor((day - 1) / 7))].income += t.amount ?? 0
   })
-  expenses.forEach((e) => {
+  safeExpenses.forEach((e) => {
     const day = new Date(e.spentAt).getDate()
     buckets[Math.min(3, Math.floor((day - 1) / 7))].expense += e.amount ?? 0
   })

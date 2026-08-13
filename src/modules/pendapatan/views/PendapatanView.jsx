@@ -3,12 +3,13 @@ import emptyTransactionsIllustration from '../../../assets/illustrations/empty-h
 import PageShell from '../../../components/ui/PageShell'
 import Icon from '../../../components/ui/Icon'
 import RevenueChart from '../../../components/ui/Chart/RevenueChart'
-import Popover from '../../../components/ui/Popover'
-import Checkbox from '../../../components/ui/Checkbox'
 import CatatPengeluaranDrawer from '../components/CatatPengeluaranDrawer'
+import ExpenseDetailModal from '../components/ExpenseDetailModal'
+import PendapatanFilterPopover, { EMPTY_PENDAPATAN_FILTERS } from '../components/PendapatanFilterPopover'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import * as pendapatanService from '../services/pendapatanService'
 import { PAYMENT_METHOD_LABEL } from '../../../constants/paymentMethod'
+import { EXPENSE_CATEGORY_LABEL, FUNDING_SOURCE_LABEL } from '../../../constants/expenseOptions'
 import {
   getPeriodRange,
   getPreviousPeriodRange,
@@ -30,8 +31,6 @@ const PERIOD_COMPARISON_LABEL = {
   month: 'dari bulan kemarin',
 }
 
-const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABEL)
-
 function formatRupiah(amount) {
   return `Rp. ${(amount ?? 0).toLocaleString('id-ID')}`
 }
@@ -42,6 +41,18 @@ function formatDateTime(iso) {
   const datePart = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
   const timePart = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':')
   return `${datePart}, ${timePart}`
+}
+
+// api.js's response interceptor unwraps the backend's { success, data,
+// pagination? } envelope: when there's no `pagination`, it resolves straight
+// to `data.data` (the raw array); when there IS pagination, it resolves to
+// `{ data: data.data, pagination }`. listTransactions/listExpenses may hit
+// either shape depending on whether that endpoint returns pagination, so
+// normalize both here instead of assuming `.data` always exists.
+function extractList(res) {
+  if (Array.isArray(res)) return res
+  if (Array.isArray(res?.data)) return res.data
+  return []
 }
 
 export default function PendapatanView() {
@@ -57,9 +68,10 @@ export default function PendapatanView() {
   const [chartData, setChartData] = useState({ today: [], week: [], month: [] })
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedMethods, setSelectedMethods] = useState([])
+  const [filters, setFilters] = useState(EMPTY_PENDAPATAN_FILTERS)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState(null)
+  const [selectedExpenseId, setSelectedExpenseId] = useState(null)
 
   const loadPeriod = async (activePeriod) => {
     setLoading(true)
@@ -75,10 +87,13 @@ export default function PendapatanView() {
         pendapatanService.listExpenses(prevRange),
       ])
 
-      setTransactions(txRes.data)
-      setExpenses(expRes.data)
-      setPrevTotals({ revenue: sumAmount(prevTxRes.data), expense: sumAmount(prevExpRes.data) })
-      setChartData((prev) => ({ ...prev, [activePeriod]: buildChartBucket(activePeriod, txRes.data, expRes.data, range) }))
+      setTransactions(extractList(txRes))
+      setExpenses(extractList(expRes))
+      setPrevTotals({ revenue: sumAmount(extractList(prevTxRes)), expense: sumAmount(extractList(prevExpRes)) })
+      setChartData((prev) => ({
+        ...prev,
+        [activePeriod]: buildChartBucket(activePeriod, extractList(txRes), extractList(expRes), range),
+      }))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -96,29 +111,78 @@ export default function PendapatanView() {
   const totalNet = totalRevenue - totalExpense
   const prevNet = prevTotals.revenue - prevTotals.expense
 
-  const filteredTransactions = transactions.filter((t) => {
+  // Gabungkan transaksi (pemasukan) & pengeluaran jadi satu list riwayat,
+  // diurutkan dari yang terbaru — sesuai tampilan panel kanan pada mockup.
+  const entries = useMemo(() => {
+    const incomeEntries = transactions.map((t) => ({ type: 'INCOME', date: t.paidAt ?? t.createdAt, data: t }))
+    const expenseEntries = expenses.map((e) => ({ type: 'EXPENSE', date: e.spentAt ?? e.createdAt, data: e }))
+    return [...incomeEntries, ...expenseEntries].sort((a, b) => new Date(b.date) - new Date(a.date))
+  }, [transactions, expenses])
+
+  const filteredEntries = entries.filter((entry) => {
+    if (!filters.budgetTypes.includes(entry.type === 'INCOME' ? 'PEMASUKAN' : 'PENGELUARAN')) return false
+
+    if (filters.dateRange?.from) {
+      const entryDate = new Date(entry.date)
+      entryDate.setHours(0, 0, 0, 0)
+      const from = new Date(filters.dateRange.from)
+      from.setHours(0, 0, 0, 0)
+      const to = new Date(filters.dateRange.to ?? filters.dateRange.from)
+      to.setHours(23, 59, 59, 999)
+      if (entryDate < from || entryDate > to) return false
+    }
+
+    if (entry.type === 'INCOME') {
+      const t = entry.data
+      const matchesSearch =
+        !searchQuery ||
+        t.order?.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.order?.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      if (!matchesSearch) return false
+      if (filters.paymentMethods.length > 0 && !filters.paymentMethods.includes(t.paymentMethod)) return false
+      if (
+        filters.serviceTypes.length > 0 &&
+        !filters.serviceTypes.some((service) => t.order?.serviceType === service || t.order?.items?.some((i) => i.serviceType === service))
+      ) {
+        return false
+      }
+      return true
+    }
+
+    // EXPENSE
+    const e = entry.data
     const matchesSearch =
       !searchQuery ||
-      t.order?.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.order?.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesMethod = selectedMethods.length === 0 || selectedMethods.includes(t.paymentMethod)
-    return matchesSearch && matchesMethod
+      e.expenseNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    if (!matchesSearch) return false
+    if (filters.expenseCategories.length > 0 && !filters.expenseCategories.includes(e.category)) return false
+    return true
   })
-
-  const toggleMethod = (method) => {
-    setSelectedMethods((prev) => (prev.includes(method) ? prev.filter((m) => m !== method) : [...prev, method]))
-  }
 
   const handleDownloadReport = () => {
     const periodLabel = PERIODS.find((p) => p.key === period)?.label ?? period
-    const header = ['No. Pesanan', 'Pelanggan', 'Metode Pembayaran', 'Jumlah', 'Tanggal']
-    const rows = filteredTransactions.map((t) => [
-      t.order?.orderNumber ?? '',
-      t.order?.customer?.name ?? '',
-      PAYMENT_METHOD_LABEL[t.paymentMethod] ?? t.paymentMethod,
-      t.amount,
-      formatDateTime(t.paidAt ?? t.createdAt),
-    ])
+    const header = ['No.', 'Jenis', 'Detail', 'Jumlah', 'Tanggal']
+    const rows = filteredEntries.map((entry) => {
+      if (entry.type === 'INCOME') {
+        const t = entry.data
+        return [
+          t.order?.orderNumber ?? '',
+          'Pemasukan',
+          t.order?.customer?.name ?? '',
+          t.amount,
+          formatDateTime(t.paidAt ?? t.createdAt),
+        ]
+      }
+      const e = entry.data
+      return [
+        e.expenseNumber ?? '',
+        'Pengeluaran',
+        EXPENSE_CATEGORY_LABEL[e.category] ?? e.category,
+        -e.amount,
+        formatDateTime(e.spentAt ?? e.createdAt),
+      ]
+    })
     const summary = [
       [],
       ['Total Pendapatan', totalRevenue],
@@ -139,34 +203,34 @@ export default function PendapatanView() {
   }
 
   const statCards = [
-    {
-      key: 'net',
-      label: 'Total Bersih',
-      value: totalNet,
-      change: percentChange(totalNet, prevNet),
-      icon: 'account_balance_wallet',
-      bg: 'bg-[#FFDEA4]',
-      iconColor: 'text-[#5D4200]',
-    },
-    {
-      key: 'revenue',
-      label: 'Total Pendapatan',
-      value: totalRevenue,
-      change: percentChange(totalRevenue, prevTotals.revenue),
-      icon: 'trending_up',
-      bg: 'bg-[#2D6A44]',
-      iconColor: 'text-white',
-    },
-    {
-      key: 'expense',
-      label: 'Total Pengeluaran',
-      value: totalExpense,
-      change: percentChange(totalExpense, prevTotals.expense),
-      icon: 'trending_down',
-      bg: 'bg-[#930006]',
-      iconColor: 'text-white',
-    },
-  ]
+  {
+    key: 'net',
+    label: 'Total Bersih',
+    value: totalNet,
+    change: percentChange(totalNet, prevNet),
+    icon: 'payments',
+    bg: 'bg-[#FFDEA4]',
+    iconColor: 'text-[#5D4200]',
+  },
+  {
+    key: 'revenue',
+    label: 'Total Pendapatan',
+    value: totalRevenue,
+    change: percentChange(totalRevenue, prevTotals.revenue),
+    icon: 'payments',
+    bg: 'bg-[#2D6A44]',
+    iconColor: 'text-white',
+  },
+  {
+    key: 'expense',
+    label: 'Total Pengeluaran',
+    value: totalExpense,
+    change: percentChange(totalExpense, prevTotals.expense),
+    icon: 'payments',
+    bg: 'bg-[#930006]',
+    iconColor: 'text-white',
+  },
+]
 
   return (
     <PageShell
@@ -214,8 +278,8 @@ export default function PendapatanView() {
             key={card.key}
             className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 shadow-sm flex items-center gap-4"
           >
-            <span className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${card.bg} ${card.iconColor}`}>
-              <Icon name={card.icon} size={24} />
+            <span className={`w-[70px] h-[70px] rounded-xl flex items-center justify-center shrink-0 ${card.bg} ${card.iconColor}`}>
+              <Icon name={card.icon} size={44} />
             </span>
             <div className="min-w-0">
               <p className="text-label-sm text-on-surface-variant font-semibold">{card.label}</p>
@@ -261,46 +325,7 @@ export default function PendapatanView() {
               />
             </div>
 
-            <Popover
-              align="end"
-              trigger={({ toggle }) => (
-                <button
-                  type="button"
-                  onClick={toggle}
-                  className="flex items-center gap-1.5 h-[46px] px-3 rounded-xl border border-outline-variant text-label-sm text-on-surface-variant cursor-pointer hover:bg-surface-container-low shrink-0"
-                >
-                  <Icon name="filter_alt" size={18} />
-                  Filter
-                  {selectedMethods.length > 0 && (
-                    <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-on-primary">
-                      {selectedMethods.length}
-                    </span>
-                  )}
-                </button>
-              )}
-            >
-              {() => (
-                <div className="w-56 rounded-lg border border-outline-variant bg-surface-container-lowest p-4 shadow-lg">
-                  <span className="text-label-md font-bold text-on-surface">Metode Pembayaran</span>
-                  <div className="mt-2 flex flex-col divide-y divide-outline-variant">
-                    {PAYMENT_METHODS.map((method) => (
-                      <label
-                        key={method}
-                        className="flex cursor-pointer items-center justify-between gap-3 py-1.5"
-                      >
-                        <span className="text-body-md text-on-surface-variant">
-                          {PAYMENT_METHOD_LABEL[method]}
-                        </span>
-                        <Checkbox
-                          checked={selectedMethods.includes(method)}
-                          onChange={() => toggleMethod(method)}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Popover>
+            <PendapatanFilterPopover value={filters} onApply={setFilters} />
           </div>
 
           {loading ? (
@@ -308,42 +333,78 @@ export default function PendapatanView() {
               <span className="w-10 h-10 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></span>
               <p className="text-body-md text-on-surface-variant/70 font-semibold">Memuat transaksi...</p>
             </div>
-          ) : filteredTransactions.length > 0 ? (
+          ) : filteredEntries.length > 0 ? (
             <div className="flex-1 flex flex-col gap-4 divide-y divide-outline-variant/25 overflow-y-auto custom-scrollbar">
-              {filteredTransactions.map((t) => (
-                <div key={t.id} className="pt-4 first:pt-0 flex flex-col gap-1.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex flex-col">
-                      <span className="text-label-md font-mono font-extrabold text-on-surface">
-                        {t.order?.orderNumber}
-                      </span>
-                      <span className="text-label-sm text-on-surface-variant/80 font-semibold">
-                        {t.order?.customer?.name}
+              {filteredEntries.map((entry) =>
+                entry.type === 'INCOME' ? (
+                  <div key={`tx-${entry.data.id}`} className="pt-4 first:pt-0 flex flex-col gap-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-col">
+                        <span className="text-label-md font-mono font-extrabold text-on-surface">
+                          {entry.data.order?.orderNumber}
+                        </span>
+                        <span className="text-label-sm text-on-surface-variant/80 font-semibold">
+                          {entry.data.order?.customer?.name}
+                        </span>
+                      </div>
+                      <span className="text-label-sm font-bold text-primary font-mono shrink-0">
+                        + {formatRupiah(entry.data.amount)}
                       </span>
                     </div>
-                    <span className="text-label-sm font-bold text-primary font-mono shrink-0">
-                      {formatRupiah(t.amount)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-on-surface-variant/70 font-bold">
-                      {formatDateTime(t.paidAt ?? t.createdAt)}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span className="rounded-md bg-primary-container/45 px-2 py-0.5 text-[11px] font-bold text-primary">
-                        {PAYMENT_METHOD_LABEL[t.paymentMethod] ?? t.paymentMethod}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-on-surface-variant/70 font-bold">
+                        {formatDateTime(entry.data.paidAt ?? entry.data.createdAt)}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedOrderId(t.orderId)}
-                        className="text-label-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-0 outline-none"
-                      >
-                        Lihat Receipt
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-md bg-primary-container/45 px-2 py-0.5 text-[11px] font-bold text-primary">
+                          {PAYMENT_METHOD_LABEL[entry.data.paymentMethod] ?? entry.data.paymentMethod}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOrderId(entry.data.orderId)}
+                          className="text-label-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-0 outline-none"
+                        >
+                          Lihat Receipt
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ) : (
+                  <div key={`exp-${entry.data.id}`} className="pt-4 first:pt-0 flex flex-col gap-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-col">
+                        <span className="text-label-md font-mono font-extrabold text-on-surface">
+                          {entry.data.expenseNumber ?? entry.data.id}
+                        </span>
+                        <span className="text-label-sm text-on-surface-variant/80 font-semibold">
+                          {EXPENSE_CATEGORY_LABEL[entry.data.category] ?? entry.data.category}
+                          {entry.data.description ? ` - ${entry.data.description}` : ''}
+                        </span>
+                      </div>
+                      <span className="text-label-sm font-bold text-error font-mono shrink-0">
+                        - {formatRupiah(entry.data.amount)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-on-surface-variant/70 font-bold">
+                        {formatDateTime(entry.data.spentAt ?? entry.data.createdAt)}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-md bg-error/10 px-2 py-0.5 text-[11px] font-bold text-error">
+                          {FUNDING_SOURCE_LABEL[entry.data.fundingSource] ?? entry.data.fundingSource}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedExpenseId(entry.data.id)}
+                          className="text-label-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-0 outline-none"
+                        >
+                          Lihat Detail
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ),
+              )}
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-8">
@@ -379,6 +440,7 @@ export default function PendapatanView() {
       />
 
       <OrderDetailModal orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />
+      <ExpenseDetailModal expenseId={selectedExpenseId} onClose={() => setSelectedExpenseId(null)} />
     </PageShell>
   )
-}
+} 
