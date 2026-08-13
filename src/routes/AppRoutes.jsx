@@ -8,9 +8,11 @@ import OrderListView from '../modules/orders/views/OrderListView'
 import OrderDetailView from '../modules/orders/views/OrderDetailView'
 import HistoryView from '../modules/history/views/HistoryView'
 import NotifikasiView from '../modules/notifikasi/views/NotifikasiView'
-import SettingsView from '../modules/settings/views/SettingsView'
-import EditAccountView from '../modules/settings/views/EditAccountView'
-import SettingsPlaceholderView from '../modules/settings/views/SettingsPlaceholderView'
+import PengaturanView from '../modules/settings/views/PengaturanView'
+import EditProfilAkunView from '../modules/settings/views/EditProfilAkunView'
+import EditProfilLaundryView from '../modules/settings/views/EditProfilLaundryView'
+import PengaturanNotifikasiView from '../modules/settings/views/PengaturanNotifikasiView'
+import PengaturanPembayaranView from '../modules/settings/views/PengaturanPembayaranView'
 import NotFoundView from '../modules/errors/views/NotFoundView'
 import AccessDeniedView from '../modules/errors/views/AccessDeniedView'
 import ServerErrorView from '../modules/errors/views/ServerErrorView'
@@ -95,23 +97,23 @@ export default function AppRoutes() {
         path="/pengaturan"
         element={
           <ProtectedRoute>
-            <SettingsView />
+            <PengaturanView />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/pengaturan/akun"
+        path="/pengaturan/edit-akun"
         element={
           <ProtectedRoute>
-            <EditAccountView />
+            <EditProfilAkunView />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/pengaturan/laundry"
+        path="/pengaturan/edit-laundry"
         element={
           <ProtectedRoute>
-            <SettingsPlaceholderView title="Edit Profil Laundry" />
+            <EditProfilLaundryView />
           </ProtectedRoute>
         }
       />
@@ -119,7 +121,7 @@ export default function AppRoutes() {
         path="/pengaturan/notifikasi"
         element={
           <ProtectedRoute>
-            <SettingsPlaceholderView title="Pengaturan Notifikasi" />
+            <PengaturanNotifikasiView />
           </ProtectedRoute>
         }
       />
@@ -127,7 +129,7 @@ export default function AppRoutes() {
         path="/pengaturan/pembayaran"
         element={
           <ProtectedRoute>
-            <SettingsPlaceholderView title="Pengaturan Pembayaran" />
+            <PengaturanPembayaranView />
           </ProtectedRoute>
         }
       />
