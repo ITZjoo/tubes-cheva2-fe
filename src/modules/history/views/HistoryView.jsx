@@ -5,7 +5,7 @@ import DatePicker from '../../../components/ui/DatePicker'
 import TeleportPanel from '../../../components/ui/TeleportPanel'
 import SearchMenuPopover from '../../../components/ui/SearchMenuPopover'
 import FilterPopover from '../../../components/ui/FilterPopover'
-import Sidebar from '../../../components/ui/Sidebar'
+import PageShell from '../../../components/ui/PageShell'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import HistoryListItem from '../component/HistoryListItem'
 import HistoryEmptyState from '../component/HistoryEmptyState'
@@ -17,10 +17,6 @@ export default function HistoryView() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDate, setSelectedDate] = useState(null)
   const [filters, setFilters] = useState({ statuses: [], services: [] })
-
-  // DatePicker nggak punya wrapper popover sendiri (cuma DatePicker.jsx +
-  // index.js) — jadi dibungkus TeleportPanel, pola yang sama kayak di
-  // DashboardView.jsx / OrderListView.jsx.
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const dateButtonRef = useRef(null)
 
@@ -64,10 +60,11 @@ export default function HistoryView() {
   }, [searchQuery, selectedDate, filters])
 
   return (
-    <div className="flex min-h-screen bg-surface">
-      <Sidebar activeItemId="history" onItemClick={handleSidebarNavigate} />
-
-      <main className="flex-1 overflow-x-hidden p-6 md:p-8 font-body max-w-[1400px] mx-auto flex flex-col gap-6">
+    <PageShell
+      activeItemId="history"
+      onItemClick={handleSidebarNavigate}
+      mainClassName="p-6 md:p-8 font-body max-w-[1400px] mx-auto flex flex-col gap-6"
+    >
         <div>
           <Typography variant="h2" className="text-on-surface">
             History
@@ -132,7 +129,6 @@ export default function HistoryView() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+    </PageShell>
   )
 }
