@@ -41,7 +41,7 @@ export default function OrderDetailModal({ orderId, onClose }) {
       try {
         setLoading(true)
         setError(null)
-        const { data } = await orderService.getOrder(orderId)
+        const data = await orderService.getOrder(orderId)
         if (!cancelled) setOrder(data)
       } catch (err) {
         if (!cancelled) setError(err.message)
