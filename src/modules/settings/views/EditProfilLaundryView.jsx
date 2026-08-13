@@ -87,7 +87,7 @@ function TimeField({ label, value, onChange }) {
 export default function EditProfilLaundryView() {
   const navigate = useNavigate()
 
-  const [namaLaundry, setNamaLaundry] = useState('')
+  const [namaLaundry, setNamaLaundry] = useState('Utama Laundry')
   const [alamat, setAlamat] = useState('')
   const [informasi, setInformasi] = useState('')
   const [selectedDays, setSelectedDays] = useState(DAYS.map((d) => d.key))
