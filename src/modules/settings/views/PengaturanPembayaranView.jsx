@@ -238,7 +238,7 @@ export default function PengaturanPembayaranView() {
   // QRIS
   const [qrisEnabled, setQrisEnabled] = useState(true)
   const [namaMerchant, setNamaMerchant] = useState('Utama Laundry')
-  const [nmid, setNmid] = useState('ID12345678901')
+  const [nmid, setNmid] = useState('')
   const [qrisPreview, setQrisPreview] = useState(null)
 
   // Rekening Bank/Transfer
@@ -309,157 +309,158 @@ export default function PengaturanPembayaranView() {
       <Sidebar activeItemId="pengaturan" onItemClick={handleSidebarItemClick} onLogout={handleLogout} />
 
       <div className="flex-1 overflow-y-auto p-8">
-        {/* Header: arrow + judul sejajar di satu baris */}
-        <div className="flex items-center gap-3">
-          <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center">
-            <Icon name="arrow_back_ios" size={20} className="text-[#1C1B1F]" />
-          </button>
-          <Typography
-            variant="h1"
-            className="font-sans !w-[375px] !text-[32px] !font-bold !leading-10 !tracking-[-0.01em] text-black"
-          >
-            Pengaturan Pembayaran
-          </Typography>
-        </div>
+        <div className="mx-auto w-full max-w-[762px]">
+          {/* Header: arrow + judul sejajar di satu baris */}
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center">
+              <Icon name="arrow_back_ios" size={20} className="text-[#1C1B1F]" />
+            </button>
+            <Typography
+              variant="h1"
+              className="font-sans !w-[375px] !text-[32px] !font-bold !leading-10 !tracking-[-0.01em] text-black"
+            >
+              Pengaturan Pembayaran
+            </Typography>
+          </div>
 
-        <div className="mt-[54px] flex w-full max-w-[762px] flex-col gap-6">
-          {/* ===== QRIS ===== */}
-          <div className="flex flex-col">
-            <div className="flex h-[89px] items-center justify-between rounded-tl-lg rounded-tr-lg bg-on-primary px-6 py-6 shadow-[0px_1px_8px_0px_#00000026]">
-              <div className="flex flex-col gap-1">
-                <Typography variant="label-lg" className={SECTION_TITLE_CLASS}>
-                  QRIS
-                </Typography>
-                <Typography variant="body-sm" className={`!w-[333px] ${SECTION_DESC_CLASS}`}>
-                  Unggah barcode QRIS toko Anda agar otomatis tampil di nota.
-                </Typography>
+          <div className="mt-[54px] flex w-full flex-col gap-6">
+            {/* ===== QRIS ===== */}
+            <div className="flex flex-col">
+              <div className="flex h-[89px] items-center justify-between rounded-tl-lg rounded-tr-lg bg-on-primary px-6 py-6 shadow-[0px_1px_8px_0px_#00000026]">
+                <div className="flex flex-col gap-1">
+                  <Typography variant="label-lg" className={SECTION_TITLE_CLASS}>
+                    QRIS
+                  </Typography>
+                  <Typography variant="body-sm" className={`!w-[333px] ${SECTION_DESC_CLASS}`}>
+                    Unggah barcode QRIS toko Anda agar otomatis tampil di nota.
+                  </Typography>
+                </div>
+                <Toggle checked={qrisEnabled} onChange={setQrisEnabled} />
               </div>
-              <Toggle checked={qrisEnabled} onChange={setQrisEnabled} />
-            </div>
 
-            {qrisEnabled && (
-              <div className="flex flex-col gap-[15px] rounded-bl-2xl rounded-br-2xl bg-on-primary p-6 shadow-[0px_1px_8px_0px_#00000026]">
-                <div className="flex flex-wrap gap-6">
-                  <div className="flex w-full max-w-[300px] flex-col gap-4">
-                    <div className="flex flex-col gap-1">
-                      <Typography variant="label-lg" className={FIELD_LABEL_CLASS}>
-                        Nama Merchant
-                      </Typography>
-                      <Input
-                        value={namaMerchant}
-                        onChange={(e) => setNamaMerchant(e.target.value)}
-                        className={`!h-9 ${PLACEHOLDER_BOX_CLASS}`}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Typography variant="label-lg" className={FIELD_LABEL_CLASS}>
-                        NMID
-                      </Typography>
-                      <Input
-                        value={nmid}
-                        onChange={(e) => setNmid(e.target.value)}
-                        className={`!h-9 ${PLACEHOLDER_BOX_CLASS}`}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex w-[358px] shrink-0 flex-col gap-3">
-                    <button
-                      type="button"
-                      onClick={handleUploadQrisClick}
-                      className="flex h-[185px] w-full flex-col items-center justify-center gap-2.5 rounded-lg border border-dashed border-[#89D0ED] bg-[#B9EAFF4D] px-[15px] py-2.5 text-on-surface-variant transition-colors hover:bg-[#B9EAFF80]"
-                    >
-                      {qrisPreview ? (
-                        <img
-                          src={qrisPreview}
-                          alt="Preview QRIS"
-                          className="h-full w-full rounded-lg object-contain"
+              {qrisEnabled && (
+                <div className="flex flex-col gap-[15px] rounded-bl-2xl rounded-br-2xl bg-on-primary p-6 shadow-[0px_1px_8px_0px_#00000026]">
+                  <div className="flex flex-wrap gap-6">
+                    <div className="flex w-full max-w-[300px] flex-col gap-4">
+                      <div className="flex flex-col gap-1">
+                        <Typography variant="label-lg" className={FIELD_LABEL_CLASS}>
+                          Nama Merchant
+                        </Typography>
+                        <Input
+                          value={namaMerchant}
+                          onChange={(e) => setNamaMerchant(e.target.value)}
+                          className={`!h-9 ${PLACEHOLDER_BOX_CLASS}`}
                         />
-                      ) : (
-                        <>
-                          <Icon name="upload" size={28} className="text-primary" />
-                          <span className="font-body text-[13px]">Upload QRIS</span>
-                        </>
-                      )}
-                    </button>
-
-                    <div className="flex gap-3">
-                      <Button
-                        variant="primary"
-                        appearance="solid"
-                        onClick={handleUploadQrisClick}
-                        className="!h-[42px] !flex-1 !whitespace-nowrap !rounded-lg !px-4 !py-2.5 font-body !text-[13px] !font-medium"
-                      >
-                        Upload QRIS
-                      </Button>
-                      <Button
-                        variant="danger"
-                        appearance="solid"
-                        onClick={handleRemoveQris}
-                        startIcon={<Icon name="delete" size={15} className="text-on-error-container" />}
-                        className="!h-[42px] !flex-1 !whitespace-nowrap !rounded-lg !bg-error-container !px-4 !py-2.5 font-body !text-[13px] !font-medium !text-on-error-container hover:!brightness-100"
-                      >
-                        Hapus QRIS
-                      </Button>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Typography variant="label-lg" className={FIELD_LABEL_CLASS}>
+                          NMID
+                        </Typography>
+                        <Input
+                          value={nmid}
+                          onChange={(e) => setNmid(e.target.value)}
+                          className={`!h-9 ${PLACEHOLDER_BOX_CLASS}`}
+                        />
+                      </div>
                     </div>
-                    <input
-                      ref={qrisInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleQrisFileChange}
-                      className="hidden"
-                    />
+
+                    <div className="flex w-[358px] shrink-0 flex-col gap-3">
+                      <button
+                        type="button"
+                        onClick={handleUploadQrisClick}
+                        className="flex h-[185px] w-full flex-col items-center justify-center gap-2.5 rounded-lg border border-dashed border-[#89D0ED] bg-[#B9EAFF4D] px-[15px] py-2.5 text-on-surface-variant transition-colors hover:bg-[#B9EAFF80]"
+                      >
+                        {qrisPreview ? (
+                          <img
+                            src={qrisPreview}
+                            alt="Preview QRIS"
+                            className="h-full w-full rounded-lg object-contain"
+                          />
+                        ) : (
+                          <>
+                            <span className="font-body text-[13px]">Upload QRIS</span>
+                          </>
+                        )}
+                      </button>
+
+                      <div className="flex gap-3">
+                        <Button
+                          variant="primary"
+                          appearance="solid"
+                          onClick={handleUploadQrisClick}
+                          className="!h-[42px] !flex-1 !whitespace-nowrap !rounded-lg !px-4 !py-2.5 font-body !text-[13px] !font-medium"
+                        >
+                          Upload QRIS
+                        </Button>
+                        <Button
+                          variant="danger"
+                          appearance="solid"
+                          onClick={handleRemoveQris}
+                          startIcon={<Icon name="delete" size={15} className="text-on-error-container" />}
+                          className="!h-[42px] !flex-1 !whitespace-nowrap !rounded-lg !bg-error-container !px-4 !py-2.5 font-body !text-[13px] !font-medium !text-on-error-container hover:!brightness-100"
+                        >
+                          Hapus QRIS
+                        </Button>
+                      </div>
+                      <input
+                        ref={qrisInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleQrisFileChange}
+                        className="hidden"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* ===== Rekening Bank/Transfer ===== */}
-          <div className="flex flex-col">
-            <div className="flex h-[89px] items-center justify-between rounded-tl-lg rounded-tr-lg bg-on-primary px-6 py-6 shadow-[0px_1px_8px_0px_#00000026]">
-              <div className="flex flex-col gap-1">
-                <Typography variant="label-lg" className={SECTION_TITLE_CLASS}>
-                  Rekening Bank/Transfer
-                </Typography>
-                <Typography variant="body-sm" className={SECTION_DESC_CLASS}>
-                  Rekening Bank yang akan ditampilkan pada nota.
-                </Typography>
-              </div>
-              <Toggle checked={rekeningEnabled} onChange={setRekeningEnabled} />
+              )}
             </div>
 
-            {rekeningEnabled && (
-              <div className="flex flex-col gap-[15px] rounded-bl-2xl rounded-br-2xl bg-on-primary p-6 shadow-[0px_1px_8px_0px_#00000026]">
-                {accounts.map((account) => (
-                  <BankAccountRow
-                    key={account.id}
-                    account={account}
-                    onToggle={handleToggleAccount}
-                    onEdit={openEditModal}
-                    onDelete={handleDeleteAccount}
-                  />
-                ))}
-
-                <Button
-                  variant="primary"
-                  appearance="solid"
-                  onClick={openAddModal}
-                  startIcon={<Icon name="add" size={18} />}
-                  className="!h-10 !w-full !rounded-lg font-body !text-[13px]"
-                >
-                  Tambahkan Rekening Bank Baru
-                </Button>
+            {/* ===== Rekening Bank/Transfer ===== */}
+            <div className="flex flex-col">
+              <div className="flex h-[89px] items-center justify-between rounded-tl-lg rounded-tr-lg bg-on-primary px-6 py-6 shadow-[0px_1px_8px_0px_#00000026]">
+                <div className="flex flex-col gap-1">
+                  <Typography variant="label-lg" className={SECTION_TITLE_CLASS}>
+                    Rekening Bank/Transfer
+                  </Typography>
+                  <Typography variant="body-sm" className={SECTION_DESC_CLASS}>
+                    Rekening Bank yang akan ditampilkan pada nota.
+                  </Typography>
+                </div>
+                <Toggle checked={rekeningEnabled} onChange={setRekeningEnabled} />
               </div>
-            )}
-          </div>
 
-          {/* ===== Tunai ===== */}
-          <div className="flex h-[89px] items-center justify-between rounded-2xl bg-on-primary px-6 py-6 shadow-[0px_1px_8px_0px_#00000026]">
-            <Typography variant="label-lg" className={SECTION_TITLE_CLASS}>
-              Tunai
-            </Typography>
-            <Toggle checked={tunaiEnabled} onChange={setTunaiEnabled} />
+              {rekeningEnabled && (
+                <div className="flex flex-col gap-[15px] rounded-bl-2xl rounded-br-2xl bg-on-primary p-6 shadow-[0px_1px_8px_0px_#00000026]">
+                  {accounts.map((account) => (
+                    <BankAccountRow
+                      key={account.id}
+                      account={account}
+                      onToggle={handleToggleAccount}
+                      onEdit={openEditModal}
+                      onDelete={handleDeleteAccount}
+                    />
+                  ))}
+
+                  <Button
+                    variant="primary"
+                    appearance="solid"
+                    onClick={openAddModal}
+                    startIcon={<Icon name="add" size={18} />}
+                    className="!h-10 !w-full !rounded-lg font-body !text-[13px]"
+                  >
+                    Tambahkan Rekening Bank Baru
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* ===== Tunai ===== */}
+            <div className="flex h-[89px] items-center justify-between rounded-2xl bg-on-primary px-6 py-6 shadow-[0px_1px_8px_0px_#00000026]">
+              <Typography variant="label-lg" className={SECTION_TITLE_CLASS}>
+                Tunai
+              </Typography>
+              <Toggle checked={tunaiEnabled} onChange={setTunaiEnabled} />
+            </div>
           </div>
         </div>
       </div>
