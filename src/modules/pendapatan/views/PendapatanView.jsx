@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import emptyTransactionsIllustration from '../../../assets/illustrations/empty-history.svg'
 import PageShell from '../../../components/ui/PageShell'
 import Icon from '../../../components/ui/Icon'
 import RevenueChart from '../../../components/ui/Chart/RevenueChart'
@@ -41,26 +42,6 @@ function formatDateTime(iso) {
   const datePart = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
   const timePart = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':')
   return `${datePart}, ${timePart}`
-}
-
-function EmptyTransactionsIllustration() {
-  return (
-    <svg
-      viewBox="0 0 200 160"
-      xmlns="http://www.w3.org/2000/svg"
-      className="w-40 h-32 mx-auto"
-    >
-      <ellipse cx="100" cy="140" rx="55" ry="6" fill="#eff5f6" />
-      <rect x="60" y="55" width="80" height="65" rx="6" fill="#ffffff" stroke="#bfc8cc" strokeWidth="2" />
-      <path d="M68 70 L118 70" stroke="#bfc8cc" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M68 82 L132 82" stroke="#bfc8cc" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M68 94 L110 94" stroke="#bfc8cc" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M68 106 L125 106" stroke="#bfc8cc" strokeWidth="2.5" strokeLinecap="round" />
-      <circle cx="128" cy="100" r="22" fill="#0a6780" opacity="0.12" />
-      <circle cx="128" cy="100" r="16" fill="none" stroke="#0a6780" strokeWidth="3.5" />
-      <line x1="139" y1="111" x2="150" y2="122" stroke="#0a6780" strokeWidth="4" strokeLinecap="round" />
-    </svg>
-  )
 }
 
 export default function PendapatanView() {
@@ -366,7 +347,11 @@ export default function PendapatanView() {
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-8">
-              <EmptyTransactionsIllustration />
+              <img
+                src={emptyTransactionsIllustration}
+                alt="Belum ada transaksi"
+                className="h-auto w-40 object-contain"
+              />
               <div className="max-w-[220px]">
                 <h4 className="text-subtitle font-sans font-extrabold text-primary">Belum ada transaksi...</h4>
                 <p className="text-body-sm text-on-surface-variant/80 mt-1 font-medium leading-relaxed">
