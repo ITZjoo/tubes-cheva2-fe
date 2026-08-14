@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../../../components/ui/Icon'
 import Input from '../../../components/ui/Input'
@@ -7,6 +7,8 @@ import Button from '../../../components/ui/Button'
 import Sidebar from '../../../components/ui/Sidebar'
 import ProfilePhotoCard from '../components/ProfilePhotoCard'
 import PasswordFormCard from '../components/PasswordFormCard'
+import { useAuth } from '../../../context/AuthContext'
+import * as settingsService from '../services/settingsService'
 
 // TODO: sesuaikan kalau id menu Sidebar ternyata beda path-nya di AppRoutes
 const SIDEBAR_ROUTES = {
@@ -21,16 +23,41 @@ const SIDEBAR_ROUTES = {
 
 export default function EditProfilAkunView() {
   const navigate = useNavigate()
+  const { user, updateUser } = useAuth()
   const [username, setUsername] = useState('')
   const [phone, setPhone] = useState('')
   const [photoUrl, setPhotoUrl] = useState(null)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [profileError, setProfileError] = useState(null)
+  const [profileSaved, setProfileSaved] = useState(false)
 
-  function handleSaveProfile() {
-    // TODO: hook up to API — save { username, phone }
+  // Prefill from the logged-in user once AuthContext's GET /me resolves.
+  useEffect(() => {
+    if (user) {
+      setUsername(user.name ?? '')
+      setPhone(user.phone ?? '')
+    }
+  }, [user])
+
+  async function handleSaveProfile() {
+    if (!user) return
+    setProfileError(null)
+    setProfileSaved(false)
+    setSavingProfile(true)
+    try {
+      await settingsService.updateAccount(user.id, { name: username, phone })
+      updateUser({ name: username, phone })
+      setProfileSaved(true)
+    } catch (err) {
+      setProfileError(err.message || 'Gagal menyimpan profil')
+    } finally {
+      setSavingProfile(false)
+    }
   }
 
-  function handleUpdatePassword(values) {
-    // TODO: hook up to API — { oldPassword, newPassword, confirmPassword }
+  async function handleUpdatePassword({ newPassword }) {
+    if (!user) return
+    await settingsService.updateAccount(user.id, { password: newPassword })
   }
 
   function handlePhotoChange(file) {
@@ -70,22 +97,33 @@ export default function EditProfilAkunView() {
                 <Input
                   label="Username"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {
+                    setUsername(e.target.value)
+                    setProfileSaved(false)
+                  }}
                   className="!h-9 !w-full !max-w-[411px] !gap-2.5 !rounded-lg !border !border-[#89D0ED] !bg-[#B9EAFF4D] !px-[15px] !py-[5px]"
                 />
                 <Input
                   label="No Telepon"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPhone(e.target.value)
+                    setProfileSaved(false)
+                  }}
                   className="!h-9 !w-full !max-w-[411px] !gap-2.5 !rounded-lg !border !border-[#89D0ED] !bg-[#B9EAFF4D] !px-[15px] !py-[5px]"
                 />
+
+                {profileError && <p className="text-body-sm font-semibold text-error">{profileError}</p>}
+                {profileSaved && <p className="text-body-sm font-semibold text-success">Profil berhasil disimpan.</p>}
+
                 <Button
                   variant="primary"
                   appearance="solid"
                   onClick={handleSaveProfile}
+                  disabled={savingProfile || !user}
                   className="w-fit self-end !text-[12px]"
                 >
-                  Simpan Profil
+                  {savingProfile ? 'Menyimpan...' : 'Simpan Profil'}
                 </Button>
               </div>
 
