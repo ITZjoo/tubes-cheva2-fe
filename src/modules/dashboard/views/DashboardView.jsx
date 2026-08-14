@@ -299,7 +299,7 @@ setStatusCounts(counts)
               <div>
                 <span className="text-label-sm text-on-surface-variant font-bold">Siap Diambil</span>
                 <h3 className="text-3xl font-extrabold text-on-surface font-sans mt-0.5">
-                  {loading ? '—' : stats?.readyForPickup ?? 0}
+                  {loading ? '—' : stats?.readyForPickup?.value ?? stats?.readyForPickup ?? 0}
                 </h3>
               </div>
             </div>
@@ -311,7 +311,7 @@ setStatusCounts(counts)
               <div>
                 <span className="text-label-sm text-on-surface-variant font-bold">Sedang Diproses</span>
                 <h3 className="text-3xl font-extrabold text-on-surface font-sans mt-0.5">
-                  {loading ? '—' : stats?.inProgress ?? 0}
+                  {loading ? '—' : stats?.inProgress?.value ?? stats?.inProgress ?? 0}
                 </h3>
               </div>
             </div>
