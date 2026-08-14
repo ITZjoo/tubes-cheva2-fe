@@ -188,7 +188,7 @@ export default function ProductListView() {
         </button>
       </header>
 
-      <section className="bg-white border border-outline-variant/30 rounded-3xl shadow-md p-6.5 flex-1 flex flex-col min-h-[500px]">
+      <section className="bg-white border border-outline-variant/30 rounded-3xl shadow-md p-6.5 flex flex-col h-[700px]">
         <div className="flex justify-center border-b border-outline-variant/30 mb-6 font-sans">
           <button
             onClick={() => setActiveTab('utama')}
@@ -212,7 +212,7 @@ export default function ProductListView() {
           </button>
         </div>
 
-        <div className="flex-1 flex flex-col justify-between">
+        <div className="flex flex-1 min-h-0 flex-col">
           {loading ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3">
               <span className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></span>
@@ -221,7 +221,7 @@ export default function ProductListView() {
           ) : currentList.length === 0 ? (
             <EmptyState />
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-4 pr-1">
               {currentList.map((service) => (
                 <div
                   key={service.id}
@@ -310,7 +310,7 @@ export default function ProductListView() {
             </div>
           )}
 
-          <div className="flex justify-end mt-6.5">
+          <div className="flex justify-end mt-6.5 shrink-0">
             <Button
               variant="primary"
               appearance="solid"
