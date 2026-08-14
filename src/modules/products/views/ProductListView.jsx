@@ -245,7 +245,7 @@ export default function ProductListView() {
 
                   <div className="flex items-center gap-8">
                     <span className="text-xl font-bold text-primary font-sans">
-                      Rp. {(service.type === 'SATUAN' ? service.priceUnit : service.pricePerKg).toLocaleString('id-ID')}{' '}
+                      Rp. {((service.type === 'SATUAN' ? service.priceUnit : service.pricePerKg) ?? 0).toLocaleString('id-ID')}{' '}
                       <span className="text-body-sm font-medium text-on-surface-variant">
                         / {service.type === 'SATUAN' ? 'Pcs' : 'Kg'}
                       </span>
