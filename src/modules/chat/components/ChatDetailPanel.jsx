@@ -1,48 +1,33 @@
-import { useState, useEffect } from 'react'
 import Icon from '../../../components/ui/Icon'
-import QuickReplyChips from './QuickReplyChips'
 
 /**
- * ChatDetailPanel — sisi kanan: detail pelanggan + pertanyaan + jawaban cepat.
- * Dipakai bareng-bareng oleh QuickChatModal (overlay) dan ChatView (halaman penuh),
- * jadi behavior single-select & kirim-jawaban cuma ditulis sekali.
+ * ChatDetailPanel — right panel: the selected canned question's fixed answer,
+ * plus a "Catat Jawaban" action that logs the lookup (POST /canned-questions/ask).
+ * Shared by QuickChatModal (overlay) and ChatView (full page).
  *
  * Props:
- * - conversation: { id, name, role, trxId, date, question, questionTime } | null
- * - quickReplies?: string[]
- * - onSendReply: (conversationId, replyText) => void
+ * - question: { id, category, question, answer } | null
+ * - askState?: 'idle' | 'saving' | 'saved' | 'error'
+ * - lastAskedAt?: string | null — ISO timestamp of the last successful log
+ * - onAsk: () => void
  * - onClose?: () => void — kalau diisi, tombol close (X) muncul (dipakai di modal)
  * - className?: string
  */
-export default function ChatDetailPanel({ conversation, quickReplies, onSendReply, onClose, className = '' }) {
-  const [selectedReply, setSelectedReply] = useState(null)
-
-  // Reset pilihan tiap ganti percakapan biar nggak kekirim ke customer yang salah.
-  useEffect(() => {
-    setSelectedReply(null)
-  }, [conversation?.id])
-
-  if (!conversation) {
+export default function ChatDetailPanel({ question, askState = 'idle', lastAskedAt, onAsk, onClose, className = '' }) {
+  if (!question) {
     return (
       <div className={['flex-1 flex items-center justify-center text-body-md text-on-surface-variant', className].join(' ')}>
-        Pilih percakapan di sebelah kiri
+        Pilih pertanyaan di sebelah kiri
       </div>
     )
-  }
-
-  const handleSend = () => {
-    if (!selectedReply) return
-    onSendReply?.(conversation.id, selectedReply)
-    setSelectedReply(null)
   }
 
   return (
     <div className={['flex flex-col gap-[18px]', className].join(' ')}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[14px] font-medium leading-[2.2] font-body text-black">{conversation.name}</span>
           <span className="text-[12px] font-medium leading-[1.8] font-body text-secondary bg-secondary-container/30 rounded-lg px-2.5 py-1">
-            {conversation.role ?? 'Pelanggan'}
+            {question.category}
           </span>
         </div>
         {onClose && (
@@ -58,29 +43,45 @@ export default function ChatDetailPanel({ conversation, quickReplies, onSendRepl
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="text-body-sm text-outline">{conversation.trxId}</span>
-        <span className="w-[5px] h-[5px] rounded-full bg-outline shrink-0" />
-        <span className="text-body-sm text-outline">{conversation.date}</span>
-        <span className="w-[5px] h-[5px] rounded-full bg-outline shrink-0" />
-        <span className="text-body-sm text-outline">{conversation.questionTime}</span>
-      </div>
-
       <div className="flex flex-col gap-2">
-        <span className="text-body-sm font-medium text-on-surface">Pertanyaan Pelanggan</span>
-        <div className="rounded-2xl bg-primary-container/30 px-[15px] py-[10px] flex flex-col gap-1">
-          <p className="text-body-md font-semibold text-on-surface">{conversation.question}</p>
-          <span className="text-body-sm text-outline">{conversation.questionTime}</span>
+        <span className="text-body-sm font-medium text-on-surface">Pertanyaan</span>
+        <div className="rounded-2xl bg-primary-container/30 px-[15px] py-[10px]">
+          <p className="text-body-md font-semibold text-on-surface">{question.question}</p>
         </div>
       </div>
 
-      <QuickReplyChips
-        options={quickReplies}
-        selected={selectedReply}
-        onSelect={setSelectedReply}
-        onSend={handleSend}
-        disabled={!selectedReply}
-      />
+      <div className="flex flex-col gap-2">
+        <span className="text-body-sm font-medium text-on-surface">Jawaban</span>
+        <div className="rounded-2xl bg-surface-container-low px-[15px] py-[10px]">
+          <p className="text-body-md text-on-surface whitespace-pre-line">{question.answer}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        {askState === 'saved' && lastAskedAt ? (
+          <span className="flex items-center gap-1.5 text-body-sm font-semibold text-success">
+            <Icon name="check_circle" size={16} />
+            Tercatat{' '}
+            {new Date(lastAskedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        ) : askState === 'error' ? (
+          <span className="flex items-center gap-1.5 text-body-sm font-semibold text-error">
+            <Icon name="error" size={16} />
+            Gagal mencatat, coba lagi
+          </span>
+        ) : (
+          <span />
+        )}
+
+        <button
+          type="button"
+          onClick={onAsk}
+          disabled={askState === 'saving'}
+          className="shrink-0 rounded-lg text-body-sm font-semibold text-on-primary-container bg-primary-container/30 transition-colors cursor-pointer hover:bg-primary-container/50 disabled:cursor-not-allowed disabled:opacity-50 px-[25px] py-[10px]"
+        >
+          {askState === 'saving' ? 'Mencatat...' : 'Catat Jawaban'}
+        </button>
+      </div>
     </div>
   )
 }

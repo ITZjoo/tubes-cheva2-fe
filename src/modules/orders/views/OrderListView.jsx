@@ -11,6 +11,7 @@ import TeleportPanel from '../../../components/ui/TeleportPanel'
 import OrderDetailModal from '../components/OrderDetailModal'
 import QuickChatModal from '../../chat/components/QuickChatModal'
 import PesanCepatCard from '../../chat/components/PesanCepatCard'
+import useCannedQuestionCenter from '../../chat/hooks/useCannedQuestionCenter'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import * as orderService from '../services/orderService'
 import * as customerService from '../../customers/services/customerService'
@@ -33,36 +34,6 @@ const STATUS_STEPS = [
   { id: 'diantar', label: 'Diantar', icon: 'local_shipping' },
   { id: 'selesai', label: 'Selesai', icon: 'check_circle' },
   { id: 'dibatalkan', label: 'Dibatalkan', icon: 'cancel' },
-]
-
-// TODO: ganti dengan chatService begitu backend punya endpoint/model Message.
-// Bentuk data ini yang dipakai bareng oleh QuickChatModal (lihat
-// src/modules/chat/components) — sama seperti di DashboardView.jsx.
-const INITIAL_CONVERSATIONS = [
-  {
-    id: 1,
-    name: 'Rani Puspita',
-    role: 'Pelanggan',
-    time: '10 menit lalu',
-    lastMessage: 'Kapan pesanan saya selesai ?',
-    replied: false,
-    trxId: 'TRX/0023400501',
-    date: '22 Juni 2026',
-    question: 'Kapan pesanan saya selesai ?',
-    questionTime: '10 menit lalu',
-  },
-  {
-    id: 2,
-    name: 'Alberto',
-    role: 'Pelanggan',
-    time: '15 menit lalu',
-    lastMessage: 'Apakah sudah bisa diambil ?',
-    replied: false,
-    trxId: 'TRX/0023300502',
-    date: '22 Juni 2026',
-    question: 'Apakah sudah bisa diambil ?',
-    questionTime: '15 menit lalu',
-  },
 ]
 
 function formatOrderDate(iso) {
@@ -225,30 +196,9 @@ export default function OrderListView() {
       .catch((err) => console.error('Failed to load order detail', err))
   }, [editStatusOrderId])
 
-  // QuickChat: daftar percakapan + overlay — data dan bentuk sama seperti di
-  // DashboardView.jsx. TODO: satukan lewat context/hook bersama begitu chat
-  // punya backend sungguhan, biar Dashboard & Pesanan share satu sumber data.
-  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS)
-  const [activeChatId, setActiveChatId] = useState(INITIAL_CONVERSATIONS[0]?.id ?? null)
+  // "Pesan Cepat" — cari & catat jawaban FAQ (GET/POST /canned-questions).
+  const cannedQuestionCenter = useCannedQuestionCenter()
   const [isQuickChatOpen, setIsQuickChatOpen] = useState(false)
-
-  const activeConversation = conversations.find((c) => c.id === activeChatId) ?? null
-  // Widget "Pesan Cepat" cuma nampilin satu preview — prioritaskan yang
-  // belum dibalas, fallback ke yang pertama.
-  const featuredConversation = conversations.find((c) => !c.replied) ?? conversations[0] ?? null
-
-  const openQuickChat = (conversationId) => {
-    setActiveChatId(conversationId)
-    setIsQuickChatOpen(true)
-  }
-
-  const handleSendReply = (conversationId, replyText) => {
-    setConversations((prev) =>
-      prev.map((c) => (c.id === conversationId ? { ...c, replied: true } : c))
-    )
-    // TODO: kirim ke backend begitu endpoint chat tersedia.
-    console.log('Kirim balasan ke', conversationId, ':', replyText)
-  }
 
   const isPanelFilterActive =
     activeFilters.statuses.length > 0 ||
@@ -720,13 +670,7 @@ export default function OrderListView() {
                </div>
              </div>
 
-            {/* Pesan Cepat — sesuai spek Figma, cuma nampilin satu percakapan
-                unggulan + tombol Jawab, bukan list scroll */}
-            <PesanCepatCard
-              conversation={featuredConversation}
-              onLihatSemua={() => openQuickChat(conversations[0]?.id)}
-              onJawab={() => openQuickChat(featuredConversation?.id)}
-            />
+            <PesanCepatCard center={cannedQuestionCenter} onLihatSemua={() => setIsQuickChatOpen(true)} />
 
             <button
               onClick={() => setIsAddDrawerOpen(true)}
@@ -935,15 +879,7 @@ export default function OrderListView() {
 
       <OrderDetailModal orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />
 
-      <QuickChatModal
-        open={isQuickChatOpen}
-        onClose={() => setIsQuickChatOpen(false)}
-        conversations={conversations}
-        activeConversationId={activeChatId}
-        onSelectConversation={setActiveChatId}
-        activeConversation={activeConversation}
-        onSendReply={handleSendReply}
-      />
+      <QuickChatModal open={isQuickChatOpen} onClose={() => setIsQuickChatOpen(false)} center={cannedQuestionCenter} />
     </PageShell>
   )
 }
