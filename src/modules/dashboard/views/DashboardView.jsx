@@ -6,6 +6,7 @@ import DatePicker from '../../../components/ui/DatePicker'
 import RevenueChart from '../../../components/ui/Chart/RevenueChart'
 import QuickChatModal from '../../chat/components/QuickChatModal'
 import PesanCepatCard from '../../chat/components/PesanCepatCard'
+import useCannedQuestionCenter from '../../chat/hooks/useCannedQuestionCenter'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import * as dashboardService from '../services/dashboardService'
 import * as orderService from '../../orders/services/orderService'
@@ -32,36 +33,6 @@ const STATUS_BADGE_CLASS = {
   selesai: 'bg-secondary-container/40 text-on-secondary-container border-secondary/10',
   dibatalkan: 'bg-error-container/40 text-on-error-container border-error/10',
 }
-
-// TODO: ganti dengan chatService begitu backend punya endpoint/model Message.
-// Bentuk data ini yang dipakai bareng oleh QuickChatModal (lihat
-// src/modules/chat/components).
-const INITIAL_CONVERSATIONS = [
-  {
-    id: 1,
-    name: 'Rani Puspita',
-    role: 'Pelanggan',
-    time: '10 menit lalu',
-    lastMessage: 'Kapan pesanan saya selesai ?',
-    replied: false,
-    trxId: 'TRX/0023400501',
-    date: '22 Juni 2026',
-    question: 'Kapan pesanan saya selesai ?',
-    questionTime: '10 menit lalu',
-  },
-  {
-    id: 2,
-    name: 'Alberto',
-    role: 'Pelanggan',
-    time: '15 menit lalu',
-    lastMessage: 'Apakah sudah bisa diambil ?',
-    replied: false,
-    trxId: 'TRX/0023300502',
-    date: '22 Juni 2026',
-    question: 'Apakah sudah bisa diambil ?',
-    questionTime: '15 menit lalu',
-  },
-]
 
 function formatRupiah(amount) {
   return `Rp. ${(amount ?? 0).toLocaleString('id-ID')}`
@@ -171,30 +142,9 @@ setStatusCounts(counts)
     }
   }, [])
 
-  // QuickChat: daftar percakapan + overlay. Sama seperti chartData/orders,
-  // ini idealnya ditarik dari service begitu backend punya model Message —
-  // untuk sekarang pakai data contoh (INITIAL_CONVERSATIONS di atas).
-  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS)
-  const [activeChatId, setActiveChatId] = useState(INITIAL_CONVERSATIONS[0]?.id ?? null)
+  // "Pesan Cepat" — cari & catat jawaban FAQ (GET/POST /canned-questions).
+  const cannedQuestionCenter = useCannedQuestionCenter()
   const [isQuickChatOpen, setIsQuickChatOpen] = useState(false)
-
-  const activeConversation = conversations.find((c) => c.id === activeChatId) ?? null
-  // Widget "Pesan Cepat" cuma nampilin satu preview — prioritaskan yang
-  // belum dibalas, fallback ke yang pertama.
-  const featuredConversation = conversations.find((c) => !c.replied) ?? conversations[0] ?? null
-
-  const openQuickChat = (conversationId) => {
-    setActiveChatId(conversationId)
-    setIsQuickChatOpen(true)
-  }
-
-  const handleSendReply = (conversationId, replyText) => {
-    setConversations((prev) =>
-      prev.map((c) => (c.id === conversationId ? { ...c, replied: true } : c))
-    )
-    // TODO: kirim ke backend begitu endpoint chat tersedia.
-    console.log('Kirim balasan ke', conversationId, ':', replyText)
-  }
 
   const toggleShopStatus = () => {
     setIsShopOpen((prev) => !prev)
@@ -428,23 +378,11 @@ setStatusCounts(counts)
               </div>
             </div>
 
-            <PesanCepatCard
-              conversation={featuredConversation}
-              onLihatSemua={() => openQuickChat(conversations[0]?.id)}
-              onJawab={() => openQuickChat(featuredConversation?.id)}
-            />
+            <PesanCepatCard center={cannedQuestionCenter} onLihatSemua={() => setIsQuickChatOpen(true)} />
           </section>
         </div>
 
-        <QuickChatModal
-          open={isQuickChatOpen}
-          onClose={() => setIsQuickChatOpen(false)}
-          conversations={conversations}
-          activeConversationId={activeChatId}
-          onSelectConversation={setActiveChatId}
-          activeConversation={activeConversation}
-          onSendReply={handleSendReply}
-        />
+        <QuickChatModal open={isQuickChatOpen} onClose={() => setIsQuickChatOpen(false)} center={cannedQuestionCenter} />
     </PageShell>
   )
 }
