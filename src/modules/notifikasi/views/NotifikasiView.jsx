@@ -1,56 +1,61 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Checkbox from '../../../components/ui/Checkbox'
 import Icon from '../../../components/ui/Icon'
 import PageShell from '../../../components/ui/PageShell'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import NotificationItem from '../component/NotificationItem'
 import NotifikasiEmptyState from '../component/NotifikasiEmptyState'
+import {
+  getNotifications,
+  markNotificationsAsRead,
+  deleteNotifications,
+} from '../services/notifikasiService'
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 'ntf-1',
-    date: '2026-06-22',
-    dateLabel: '22 Juni 2026',
-    title: 'Pesan Baru',
-    description:
-      'Rani Puspita: Selamat sore ka, izin tanya, kira kira baju saya kapan ya siapnya? saya butuh cepat banget. Soalnya ada kegiatan di kampus',
-    time: '15:30',
-    isRead: false,
-  },
-  {
-    id: 'ntf-2',
-    date: '2026-06-22',
-    dateLabel: '22 Juni 2026',
-    title: 'Pembayaran baru telah diterima',
-    description: 'Rani Puspita telah melakukan pembayaran sebesar Rp. 74.600,00',
-    time: '15:30',
-    isRead: false,
-  },
-  {
-    id: 'ntf-3',
-    date: '2026-06-22',
-    dateLabel: '22 Juni 2026',
-    title: 'Pesanan sampai Laundry',
-    description: 'Pesanan dengan ID - TRX/0023400302 telah sampai laundry dan menunggu untuk diproses',
-    time: '15:30',
-    isRead: true,
-  },
-  {
-    id: 'ntf-4',
-    date: '2026-06-22',
-    dateLabel: '22 Juni 2026',
-    title: 'Pesanan Baru telah diterima',
-    description: 'Terdapat pesanan baru dengan ID - TRX/0023400302 yang menunggu pickup',
-    time: '15:30',
-    isRead: true,
-  },
+const MONTHS_ID = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ]
 
-export default function NotifikasiView({ initialNotifications = INITIAL_NOTIFICATIONS }) {
+function mapNotification(n) {
+  const created = new Date(n.createdAt)
+  const day = String(created.getDate()).padStart(2, '0')
+  const month = String(created.getMonth() + 1).padStart(2, '0')
+  const hours = String(created.getHours()).padStart(2, '0')
+  const minutes = String(created.getMinutes()).padStart(2, '0')
+
+  return {
+    id: n.id,
+    date: `${created.getFullYear()}-${month}-${day}`,
+    dateLabel: `${created.getDate()} ${MONTHS_ID[created.getMonth()]} ${created.getFullYear()}`,
+    title: n.title,
+    description: n.message,
+    time: `${hours}:${minutes}`,
+    isRead: n.isRead,
+  }
+}
+
+export default function NotifikasiView() {
   const handleSidebarNavigate = useSidebarNavigate()
 
-  const [notifications, setNotifications] = useState(initialNotifications)
+  const [notifications, setNotifications] = useState([])
   const [selectedIds, setSelectedIds] = useState(new Set())
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState(null)
+
+  const loadNotifications = async () => {
+    try {
+      const data = await getNotifications()
+      setNotifications(Array.isArray(data) ? data.map(mapNotification) : [])
+    } catch (error) {
+      setErrorMessage(error.message || 'Gagal memuat notifikasi')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadNotifications()
+  }, [])
 
   const allIds = useMemo(() => notifications.map((n) => n.id), [notifications])
   const isAllSelected = allIds.length > 0 && selectedIds.size === allIds.length
@@ -77,16 +82,26 @@ export default function NotifikasiView({ initialNotifications = INITIAL_NOTIFICA
     })
   }
 
-  const handleMarkAsRead = () => {
+  const handleMarkAsRead = async () => {
     if (selectedIds.size === 0) return
-    setNotifications((prev) => prev.map((n) => (selectedIds.has(n.id) ? { ...n, isRead: true } : n)))
-    setSelectedIds(new Set())
+    try {
+      await markNotificationsAsRead([...selectedIds])
+      setNotifications((prev) => prev.map((n) => (selectedIds.has(n.id) ? { ...n, isRead: true } : n)))
+      setSelectedIds(new Set())
+    } catch (error) {
+      setErrorMessage(error.message || 'Gagal menandai dibaca')
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedIds.size === 0) return
-    setNotifications((prev) => prev.filter((n) => !selectedIds.has(n.id)))
-    setSelectedIds(new Set())
+    try {
+      await deleteNotifications([...selectedIds])
+      setNotifications((prev) => prev.filter((n) => !selectedIds.has(n.id)))
+      setSelectedIds(new Set())
+    } catch (error) {
+      setErrorMessage(error.message || 'Gagal menghapus notifikasi')
+    }
   }
 
   const handleOpenNotification = (id) => {
@@ -143,7 +158,11 @@ export default function NotifikasiView({ initialNotifications = INITIAL_NOTIFICA
         </div>
 
         <div className="min-h-[708px] rounded-2xl bg-white p-6">
-          {notifications.length === 0 ? (
+          {errorMessage ? (
+            <p className="text-body-md text-error text-center py-16">{errorMessage}</p>
+          ) : isLoading ? (
+            <p className="text-body-md text-on-surface-variant text-center py-16">Memuat notifikasi...</p>
+          ) : notifications.length === 0 ? (
             <NotifikasiEmptyState />
           ) : (
             <div className="flex flex-col gap-[18px]">

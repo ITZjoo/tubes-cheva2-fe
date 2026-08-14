@@ -1,57 +1,48 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import PageShell from '../../../components/ui/PageShell'
+import Typography from '../../../components/ui/Typography'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import ChatList from '../components/ChatList'
 import ChatDetailPanel from '../components/ChatDetailPanel'
-
-// TODO: ganti dengan chatService begitu backend punya endpoint/model Message.
-// Untuk sekarang data contoh, sama polanya kayak chatMessages lokal di
-// DashboardView.jsx / OrderListView.jsx yang sudah ada.
-const INITIAL_CONVERSATIONS = [
-  {
-    id: 1,
-    name: 'Rani Puspita',
-    role: 'Pelanggan',
-    time: '10 menit lalu',
-    lastMessage: 'Kapan pesanan saya selesai ?',
-    replied: false,
-    trxId: 'TRX/0023400501',
-    date: '22 Juni 2026',
-    question: 'Kapan pesanan saya selesai ?',
-    questionTime: '10 menit lalu',
-  },
-  {
-    id: 2,
-    name: 'Alberto',
-    role: 'Pelanggan',
-    time: '15 menit lalu',
-    lastMessage: 'Apakah sudah bisa diambil ?',
-    replied: true,
-    trxId: 'TRX/0023300502',
-    date: '22 Juni 2026',
-    question: 'Apakah sudah bisa diambil ?',
-    questionTime: '15 menit lalu',
-  },
-]
+import { getConversations, replyToConversation } from '../services/chatService'
 
 // Halaman penuh untuk "Lihat semua" chat — dipanggil dari widget "Pesan
-// Terbaru" di Dashboard/Pesanan. Daftarkan route-nya sendiri di
-// src/routes/AppRoutes.jsx, misal:
-//   <Route path="/chat" element={<ChatView />} />
+// Terbaru" di Dashboard/Pesanan. Data diambil dari GET /chat/conversations.
 export default function ChatView() {
   const handleSidebarNavigate = useSidebarNavigate()
 
-  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS)
-  const [activeId, setActiveId] = useState(INITIAL_CONVERSATIONS[0]?.id ?? null)
+  const [conversations, setConversations] = useState([])
+  const [activeId, setActiveId] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState(null)
+
+  const loadConversations = async () => {
+    try {
+      const data = await getConversations()
+      setConversations(Array.isArray(data) ? data : [])
+      setActiveId((prev) => prev ?? data[0]?.id ?? null)
+    } catch (error) {
+      setErrorMessage(error.message || 'Gagal memuat percakapan')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadConversations()
+  }, [])
 
   const activeConversation = conversations.find((c) => c.id === activeId) ?? null
 
-  const handleSendReply = (conversationId, replyText) => {
-    setConversations((prev) =>
-      prev.map((c) => (c.id === conversationId ? { ...c, replied: true } : c))
-    )
-    // TODO: kirim ke backend begitu endpoint chat tersedia.
-    console.log('Kirim balasan ke', conversationId, ':', replyText)
+  const handleSendReply = async (conversationId, replyText) => {
+    try {
+      await replyToConversation(conversationId, replyText)
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, replied: true, lastMessage: replyText } : c))
+      )
+    } catch (error) {
+      setErrorMessage(error.message || 'Gagal mengirim balasan')
+    }
   }
 
   return (
@@ -60,9 +51,24 @@ export default function ChatView() {
       onItemClick={handleSidebarNavigate}
       mainClassName="p-6 md:p-8 font-body max-w-[1400px] mx-auto flex flex-col gap-6"
     >
+      <div>
+        <Typography variant="h2" className="text-on-surface">
+          Chat
+        </Typography>
+        <Typography variant="body-lg" className="text-on-surface-variant">
+          Balas pertanyaan pelanggan dengan cepat.
+        </Typography>
+      </div>
+
+      {errorMessage && (
+        <Typography variant="body-md" className="py-4 text-center text-error">
+          {errorMessage}
+        </Typography>
+      )}
+
       <div className="flex bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-sm overflow-hidden h-[calc(100vh-160px)] min-h-[500px]">
         <ChatList
-          conversations={conversations}
+          conversations={isLoading ? [] : conversations}
           activeConversationId={activeId}
           onSelectConversation={setActiveId}
           className="w-[280px] shrink-0 border-r border-outline-variant py-6 px-[18px]"

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../../../components/ui/Icon'
 import Input from '../../../components/ui/Input'
@@ -7,8 +7,14 @@ import Button from '../../../components/ui/Button'
 import Sidebar from '../../../components/ui/Sidebar'
 import ProfilePhotoCard from '../components/ProfilePhotoCard'
 import PasswordFormCard from '../components/PasswordFormCard'
+import { updateProfile, changePassword, uploadFile } from '../services/settingsService'
+import { getProfile } from '../../auth/services/authService'
+import { useAuth } from '../../../context/AuthContext'
 
-// TODO: sesuaikan kalau id menu Sidebar ternyata beda path-nya di AppRoutes
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+const SERVER_ORIGIN = API_BASE.replace(/\/api\/?$/, '')
+const resolveUploadUrl = (url) => (url && !url.startsWith('http') ? `${SERVER_ORIGIN}${url}` : url)
+
 const SIDEBAR_ROUTES = {
   dashboard: '/dashboard',
   pesanan: '/orders',
@@ -21,20 +27,66 @@ const SIDEBAR_ROUTES = {
 
 export default function EditProfilAkunView() {
   const navigate = useNavigate()
+  const { updateUser } = useAuth()
   const [username, setUsername] = useState('')
   const [phone, setPhone] = useState('')
   const [photoUrl, setPhotoUrl] = useState(null)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [profileMessage, setProfileMessage] = useState(null)
+  const [passwordMessage, setPasswordMessage] = useState(null)
 
-  function handleSaveProfile() {
-    // TODO: hook up to API — save { username, phone }
+  useEffect(() => {
+    getProfile()
+      .then((user) => {
+        setUsername(user.name ?? '')
+        setPhone(user.phone ?? '')
+        setPhotoUrl(resolveUploadUrl(user.photoUrl))
+      })
+      .catch(() => {})
+  }, [])
+
+  async function handleSaveProfile() {
+    try {
+      setSavingProfile(true)
+      setProfileMessage(null)
+      await updateProfile({ name: username, phone })
+      setProfileMessage('Profil berhasil disimpan')
+    } catch (error) {
+      setProfileMessage(error.message || 'Gagal menyimpan profil')
+    } finally {
+      setSavingProfile(false)
+    }
   }
 
-  function handleUpdatePassword(values) {
-    // TODO: hook up to API — { oldPassword, newPassword, confirmPassword }
+  async function handleUpdatePassword(values) {
+    if (values.newPassword !== values.confirmPassword) {
+      setPasswordMessage('Konfirmasi password tidak cocok')
+      return
+    }
+    try {
+      setSavingPassword(true)
+      setPasswordMessage(null)
+      await changePassword({ oldPassword: values.oldPassword, newPassword: values.newPassword })
+      setPasswordMessage('Password berhasil diubah')
+    } catch (error) {
+      setPasswordMessage(error.message || 'Gagal mengubah password')
+    } finally {
+      setSavingPassword(false)
+    }
   }
 
-  function handlePhotoChange(file) {
-    setPhotoUrl(URL.createObjectURL(file))
+  async function handlePhotoChange(file) {
+    try {
+      setProfileMessage(null)
+      const { url } = await uploadFile(file)
+      await updateProfile({ photoUrl: url })
+      updateUser({ photoUrl: url })
+      setPhotoUrl(resolveUploadUrl(url))
+      setProfileMessage('Foto profil berhasil disimpan')
+    } catch (error) {
+      setProfileMessage(error.message || 'Gagal mengunggah foto')
+    }
   }
 
   function handleSidebarItemClick(item) {
@@ -78,17 +130,39 @@ export default function EditProfilAkunView() {
                 onChange={(e) => setPhone(e.target.value)}
                 className="!h-9 !w-full !max-w-[411px] !gap-2.5 !rounded-lg !border !border-[#89D0ED] !bg-[#B9EAFF4D] !px-[15px] !py-[5px]"
               />
+              {profileMessage && (
+                <Typography
+                  variant="body-sm"
+                  className={profileMessage.startsWith('Profil') ? 'text-primary' : 'text-error'}
+                >
+                  {profileMessage}
+                </Typography>
+              )}
               <Button
                 variant="primary"
                 appearance="solid"
                 onClick={handleSaveProfile}
+                disabled={savingProfile}
                 className="w-fit self-end !text-[12px]"
               >
-                Simpan Profil
+                {savingProfile ? 'Menyimpan...' : 'Simpan Profil'}
               </Button>
             </div>
 
+            {passwordMessage && (
+              <Typography
+                variant="body-sm"
+                className={passwordMessage.startsWith('Password') ? 'text-primary' : 'text-error'}
+              >
+                {passwordMessage}
+              </Typography>
+            )}
             <PasswordFormCard onSubmit={handleUpdatePassword} onForgotPassword={() => navigate('/forgot-password')} />
+            {savingPassword && (
+              <Typography variant="body-sm" className="text-on-surface-variant">
+                Mengubah password...
+              </Typography>
+            )}
           </div>
 
           <ProfilePhotoCard photoUrl={photoUrl} onPhotoChange={handlePhotoChange} />

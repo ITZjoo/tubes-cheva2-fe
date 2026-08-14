@@ -2,10 +2,13 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginView from '../modules/auth/views/LoginView'
 import RegisterView from '../modules/auth/views/RegisterView'
 import OnboardingView from '../modules/auth/views/OnboardingView'
+import ForgotPasswordView from '../modules/auth/views/ForgotPasswordView'
+import ResetPasswordView from '../modules/auth/views/ResetPasswordView'
 import DashboardView from '../modules/dashboard/views/DashboardView'
 import ProductListView from '../modules/products/views/ProductListView'
 import ProductFormView from '../modules/products/views/ProductFormView'
 import OrderListView from '../modules/orders/views/OrderListView'
+import ChatView from '../modules/chat/views/Chatview'
 import HistoryView from '../modules/history/views/HistoryView'
 import NotifikasiView from '../modules/notifikasi/views/NotifikasiView'
 import PendapatanView from '../modules/pendapatan/views/PendapatanView'
@@ -38,6 +41,8 @@ export default function AppRoutes() {
       <Route path="/onboarding" element={<OnboardingView />} />
       <Route path="/login" element={<LoginView />} />
       <Route path="/register" element={<RegisterView />} />
+      <Route path="/forgot-password" element={<ForgotPasswordView />} />
+      <Route path="/reset-password" element={<ResetPasswordView />} />
 
       <Route
         path="/dashboard"
@@ -86,6 +91,14 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <HistoryView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/chat"
+        element={
+          <ProtectedRoute>
+            <ChatView />
           </ProtectedRoute>
         }
       />

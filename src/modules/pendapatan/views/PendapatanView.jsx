@@ -32,6 +32,14 @@ const PERIOD_COMPARISON_LABEL = {
 
 const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABEL)
 
+const EXPENSE_CATEGORY_LABEL = {
+  BAHAN_BAKU: 'Bahan Baku & Perlengkapan',
+  UTILITAS: 'Utilitas & Operasional',
+  GAJI: 'Karyawan & Gaji',
+  ADMINISTRASI: 'Administrasi',
+  LAINNYA: 'Lainnya',
+}
+
 function formatRupiah(amount) {
   return `Rp. ${(amount ?? 0).toLocaleString('id-ID')}`
 }
@@ -60,6 +68,7 @@ export default function PendapatanView() {
   const [selectedMethods, setSelectedMethods] = useState([])
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState(null)
+  const [listTab, setListTab] = useState('income') // 'income' | 'expense'
 
   const loadPeriod = async (activePeriod) => {
     setLoading(true)
@@ -104,6 +113,23 @@ export default function PendapatanView() {
     const matchesMethod = selectedMethods.length === 0 || selectedMethods.includes(t.paymentMethod)
     return matchesSearch && matchesMethod
   })
+
+  const filteredExpenses = expenses.filter((e) => {
+    const matchesSearch =
+      !searchQuery ||
+      (e.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (EXPENSE_CATEGORY_LABEL[e.category] ?? e.category ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesSearch
+  })
+
+  const handleDeleteExpense = async (id) => {
+    try {
+      await pendapatanService.deleteExpense(id)
+      await loadPeriod(period)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
 
   const toggleMethod = (method) => {
     setSelectedMethods((prev) => (prev.includes(method) ? prev.filter((m) => m !== method) : [...prev, method]))
@@ -245,11 +271,36 @@ export default function PendapatanView() {
         </div>
 
         <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4 min-h-[500px]">
+          <div className="flex items-center rounded-xl border border-outline-variant bg-surface-container-lowest p-1 w-fit shadow-sm">
+            <button
+              type="button"
+              onClick={() => setListTab('income')}
+              className={`px-4 py-2 rounded-lg text-label-sm font-bold transition-colors cursor-pointer ${
+                listTab === 'income'
+                  ? 'bg-primary-container text-on-primary-container'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              Pemasukan
+            </button>
+            <button
+              type="button"
+              onClick={() => setListTab('expense')}
+              className={`px-4 py-2 rounded-lg text-label-sm font-bold transition-colors cursor-pointer ${
+                listTab === 'expense'
+                  ? 'bg-primary-container text-on-primary-container'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              Pengeluaran
+            </button>
+          </div>
+
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <input
                 type="text"
-                placeholder="Cari pendapatan"
+                placeholder={listTab === 'income' ? 'Cari pendapatan' : 'Cari pengeluaran'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant rounded-xl pl-4 pr-10 py-2.5 text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary transition-all"
@@ -261,7 +312,8 @@ export default function PendapatanView() {
               />
             </div>
 
-            <Popover
+            {listTab === 'income' && (
+              <Popover
               align="end"
               trigger={({ toggle }) => (
                 <button
@@ -301,6 +353,7 @@ export default function PendapatanView() {
                 </div>
               )}
             </Popover>
+            )}
           </div>
 
           {loading ? (
@@ -308,6 +361,54 @@ export default function PendapatanView() {
               <span className="w-10 h-10 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></span>
               <p className="text-body-md text-on-surface-variant/70 font-semibold">Memuat transaksi...</p>
             </div>
+          ) : listTab === 'expense' ? (
+            filteredExpenses.length > 0 ? (
+              <div className="flex-1 flex flex-col gap-4 divide-y divide-outline-variant/25 overflow-y-auto custom-scrollbar">
+                {filteredExpenses.map((e) => (
+                  <div key={e.id} className="pt-4 first:pt-0 flex flex-col gap-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-col">
+                        <span className="text-label-md font-extrabold text-on-surface">
+                          {EXPENSE_CATEGORY_LABEL[e.category] ?? e.category ?? 'Lainnya'}
+                        </span>
+                        <span className="text-label-sm text-on-surface-variant/80 font-semibold">
+                          {e.description ?? e.source ?? '-'}
+                        </span>
+                      </div>
+                      <span className="text-label-sm font-bold text-error font-mono shrink-0">
+                        -{formatRupiah(e.amount)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-on-surface-variant/70 font-bold">
+                        {formatDateTime(e.spentAt ?? e.createdAt)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteExpense(e.id)}
+                        className="text-label-sm font-bold text-error hover:underline cursor-pointer bg-transparent border-0 outline-none"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-8">
+                <img
+                  src={emptyTransactionsIllustration}
+                  alt="Belum ada pengeluaran"
+                  className="h-auto w-40 object-contain"
+                />
+                <div className="max-w-[220px]">
+                  <h4 className="text-subtitle font-sans font-extrabold text-primary">Belum ada pengeluaran...</h4>
+                  <p className="text-body-sm text-on-surface-variant/80 mt-1 font-medium leading-relaxed">
+                    Catat pengeluaran baru untuk melihatnya di sini
+                  </p>
+                </div>
+              </div>
+            )
           ) : filteredTransactions.length > 0 ? (
             <div className="flex-1 flex flex-col gap-4 divide-y divide-outline-variant/25 overflow-y-auto custom-scrollbar">
               {filteredTransactions.map((t) => (

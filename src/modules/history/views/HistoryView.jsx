@@ -9,7 +9,7 @@ import PageShell from '../../../components/ui/PageShell'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import HistoryListItem from '../component/HistoryListItem'
 import HistoryEmptyState from '../component/HistoryEmptyState'
-import { getHistory } from '../services/historyService'
+import { getHistory } from '../services/HistoryService'
 
 export default function HistoryView() {
   const handleSidebarNavigate = useSidebarNavigate()

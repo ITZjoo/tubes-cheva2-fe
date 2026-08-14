@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import Typography from '../../../components/ui/Typography'
 import Sidebar from '../../../components/ui/Sidebar'
-import SettingsMenuItem from '../components/SettingsMenuItem'
+import SettingsMenuItem from '../components/Settingsmenuitem'
 
 const MENU_ITEMS = [
   { icon: 'account_circle', label: 'Edit Profil Akun', path: '/pengaturan/edit-akun' },

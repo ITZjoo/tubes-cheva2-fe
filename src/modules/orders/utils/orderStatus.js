@@ -1,13 +1,11 @@
-// The backend's OrderStatus enum has 10 steps (it splits out PICKUP before
-// WASHING and PACKING before READY); the FE's Stepper/EditStatusDrawer only
-// model 8. These maps bridge the two without changing either side's contract.
+// The backend's OrderStatus enum has 8 steps; the FE's Stepper/EditStatusDrawer
+// model the same 8. These maps bridge the BE enum (PENDING..CANCELLED) to the
+// FE tone keys (menunggu..dibatalkan) without changing either side's contract.
 export const BE_CHAIN = [
   'PENDING',
-  'PICKUP',
   'WASHING',
   'DRYING',
   'IRONING',
-  'PACKING',
   'READY',
   'DELIVERED',
   'COMPLETED',
@@ -24,15 +22,11 @@ export const FE_TO_BE = {
   dibatalkan: 'CANCELLED',
 }
 
-// PICKUP has no FE step of its own (still "belum dicuci") and PACKING is
-// folded into "siap_diambil" (closest visible FE step).
 export const BE_TO_FE = {
   PENDING: 'menunggu',
-  PICKUP: 'menunggu',
   WASHING: 'dicuci',
   DRYING: 'dikeringkan',
   IRONING: 'disetrika',
-  PACKING: 'siap_diambil',
   READY: 'siap_diambil',
   DELIVERED: 'diantar',
   COMPLETED: 'selesai',

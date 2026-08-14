@@ -13,3 +13,7 @@ export function listExpenses({ startDate, endDate, page = 1, limit = 500 } = {})
 export function createExpense(payload) {
   return api.post('/expenses', payload)
 }
+
+export function deleteExpense(id) {
+  return api.delete(`/expenses/${id}`)
+}

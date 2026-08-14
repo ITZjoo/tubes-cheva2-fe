@@ -10,6 +10,7 @@ import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import * as dashboardService from '../services/dashboardService'
 import * as orderService from '../../orders/services/orderService'
 import { BE_TO_FE } from '../../orders/utils/orderStatus'
+import { getConversations, replyToConversation } from '../../chat/services/chatService'
 
 const STATUS_LIST = [
   { key: 'menunggu', label: 'Menunggu', icon: 'hourglass_empty', colorClass: 'text-outline bg-surface-container' },
@@ -36,33 +37,6 @@ const STATUS_BADGE_CLASS = {
 // TODO: ganti dengan chatService begitu backend punya endpoint/model Message.
 // Bentuk data ini yang dipakai bareng oleh QuickChatModal (lihat
 // src/modules/chat/components).
-const INITIAL_CONVERSATIONS = [
-  {
-    id: 1,
-    name: 'Rani Puspita',
-    role: 'Pelanggan',
-    time: '10 menit lalu',
-    lastMessage: 'Kapan pesanan saya selesai ?',
-    replied: false,
-    trxId: 'TRX/0023400501',
-    date: '22 Juni 2026',
-    question: 'Kapan pesanan saya selesai ?',
-    questionTime: '10 menit lalu',
-  },
-  {
-    id: 2,
-    name: 'Alberto',
-    role: 'Pelanggan',
-    time: '15 menit lalu',
-    lastMessage: 'Apakah sudah bisa diambil ?',
-    replied: false,
-    trxId: 'TRX/0023300502',
-    date: '22 Juni 2026',
-    question: 'Apakah sudah bisa diambil ?',
-    questionTime: '15 menit lalu',
-  },
-]
-
 function formatRupiah(amount) {
   return `Rp. ${(amount ?? 0).toLocaleString('id-ID')}`
 }
@@ -171,30 +145,41 @@ setStatusCounts(counts)
     }
   }, [])
 
-  // QuickChat: daftar percakapan + overlay. Sama seperti chartData/orders,
-  // ini idealnya ditarik dari service begitu backend punya model Message —
-  // untuk sekarang pakai data contoh (INITIAL_CONVERSATIONS di atas).
-  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS)
-  const [activeChatId, setActiveChatId] = useState(INITIAL_CONVERSATIONS[0]?.id ?? null)
-  const [isQuickChatOpen, setIsQuickChatOpen] = useState(false)
+// QuickChat: daftar percakapan + overlay, diambil dari GET /chat/conversations.
+const [conversations, setConversations] = useState([])
+const [activeChatId, setActiveChatId] = useState(null)
+const [isQuickChatOpen, setIsQuickChatOpen] = useState(false)
 
-  const activeConversation = conversations.find((c) => c.id === activeChatId) ?? null
-  // Widget "Pesan Cepat" cuma nampilin satu preview — prioritaskan yang
-  // belum dibalas, fallback ke yang pertama.
-  const featuredConversation = conversations.find((c) => !c.replied) ?? conversations[0] ?? null
+useEffect(() => {
+  getConversations()
+    .then((data) => {
+      const list = Array.isArray(data) ? data : []
+      setConversations(list)
+      setActiveChatId((prev) => prev ?? list[0]?.id ?? null)
+    })
+    .catch((err) => console.error('Gagal memuat chat', err))
+}, [])
 
-  const openQuickChat = (conversationId) => {
-    setActiveChatId(conversationId)
-    setIsQuickChatOpen(true)
-  }
+const activeConversation = conversations.find((c) => c.id === activeChatId) ?? null
+// Widget "Pesan Cepat" cuma nampilin satu preview — prioritaskan yang
+// belum dibalas, fallback ke yang pertama.
+const featuredConversation = conversations.find((c) => !c.replied) ?? conversations[0] ?? null
 
-  const handleSendReply = (conversationId, replyText) => {
+const openQuickChat = (conversationId) => {
+  setActiveChatId(conversationId)
+  setIsQuickChatOpen(true)
+}
+
+const handleSendReply = async (conversationId, replyText) => {
+  try {
+    await replyToConversation(conversationId, replyText)
     setConversations((prev) =>
-      prev.map((c) => (c.id === conversationId ? { ...c, replied: true } : c))
+      prev.map((c) => (c.id === conversationId ? { ...c, replied: true, lastMessage: replyText } : c))
     )
-    // TODO: kirim ke backend begitu endpoint chat tersedia.
-    console.log('Kirim balasan ke', conversationId, ':', replyText)
+  } catch (error) {
+    console.error('Gagal mengirim balasan', error)
   }
+}
 
   const toggleShopStatus = () => {
     setIsShopOpen((prev) => !prev)
@@ -299,7 +284,7 @@ setStatusCounts(counts)
               <div>
                 <span className="text-label-sm text-on-surface-variant font-bold">Siap Diambil</span>
                 <h3 className="text-3xl font-extrabold text-on-surface font-sans mt-0.5">
-                  {loading ? '—' : stats?.readyForPickup ?? 0}
+                  {loading ? '—' : stats?.readyForPickup?.value ?? stats?.readyForPickup ?? 0}
                 </h3>
               </div>
             </div>
@@ -311,7 +296,7 @@ setStatusCounts(counts)
               <div>
                 <span className="text-label-sm text-on-surface-variant font-bold">Sedang Diproses</span>
                 <h3 className="text-3xl font-extrabold text-on-surface font-sans mt-0.5">
-                  {loading ? '—' : stats?.inProgress ?? 0}
+                  {loading ? '—' : stats?.inProgress?.value ?? stats?.inProgress ?? 0}
                 </h3>
               </div>
             </div>

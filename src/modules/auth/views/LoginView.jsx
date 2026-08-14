@@ -89,7 +89,10 @@ export default function LoginView() {
                 <a
                   href="#"
                   className="text-body-sm text-[#0a6780] font-bold hover:underline self-start mt-1"
-                  onClick={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    navigate('/forgot-password')
+                  }}
                 >
                   Forgot Password ?
                 </a>
@@ -165,7 +168,10 @@ export default function LoginView() {
               <a
                 href="#"
                 className="absolute right-3.5 top-3 text-body-sm text-[#0a6780] font-bold hover:underline z-10"
-                onClick={(e) => e.preventDefault()}
+                onClick={(e) => {
+                  e.preventDefault()
+                  navigate('/forgot-password')
+                }}
               >
                 Forgot?
               </a>

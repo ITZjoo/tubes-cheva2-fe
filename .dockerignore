@@ -1,0 +1,8 @@
+node_modules
+dist
+.git
+.env
+*.log
+storybook-static
+pnpm-workspace.yaml
+graphify-out

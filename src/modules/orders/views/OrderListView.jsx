@@ -16,6 +16,8 @@ import * as orderService from '../services/orderService'
 import * as customerService from '../../customers/services/customerService'
 import * as serviceService from '../../products/services/productService'
 import { BE_TO_FE } from '../utils/orderStatus'
+import { PAYMENT_METHOD_LABEL } from '../../../constants/paymentMethod'
+import { getConversations, replyToConversation } from '../../chat/services/chatService'
 
 // Ilustrasi halaman kosong — sekarang pakai aset SVG asli, bukan inline SVG.
 import emptyPesananIllustration from '../../../assets/illustrations/empty-pesanan.svg'
@@ -33,36 +35,6 @@ const STATUS_STEPS = [
   { id: 'diantar', label: 'Diantar', icon: 'local_shipping' },
   { id: 'selesai', label: 'Selesai', icon: 'check_circle' },
   { id: 'dibatalkan', label: 'Dibatalkan', icon: 'cancel' },
-]
-
-// TODO: ganti dengan chatService begitu backend punya endpoint/model Message.
-// Bentuk data ini yang dipakai bareng oleh QuickChatModal (lihat
-// src/modules/chat/components) — sama seperti di DashboardView.jsx.
-const INITIAL_CONVERSATIONS = [
-  {
-    id: 1,
-    name: 'Rani Puspita',
-    role: 'Pelanggan',
-    time: '10 menit lalu',
-    lastMessage: 'Kapan pesanan saya selesai ?',
-    replied: false,
-    trxId: 'TRX/0023400501',
-    date: '22 Juni 2026',
-    question: 'Kapan pesanan saya selesai ?',
-    questionTime: '10 menit lalu',
-  },
-  {
-    id: 2,
-    name: 'Alberto',
-    role: 'Pelanggan',
-    time: '15 menit lalu',
-    lastMessage: 'Apakah sudah bisa diambil ?',
-    replied: false,
-    trxId: 'TRX/0023300502',
-    date: '22 Juni 2026',
-    question: 'Apakah sudah bisa diambil ?',
-    questionTime: '15 menit lalu',
-  },
 ]
 
 function formatOrderDate(iso) {
@@ -159,18 +131,24 @@ export default function OrderListView() {
   const [mainServices, setMainServices] = useState([])
   const [additionalServices, setAdditionalServices] = useState([])
   const [additionalQty, setAdditionalQty] = useState({})
+  const [selectedMainServiceId, setSelectedMainServiceId] = useState(null)
+  const [paymentMethod, setPaymentMethod] = useState('CASH')
 
   useEffect(() => {
     serviceService
       .listServices()
       .then((data) => {
-        setMainServices(data.filter((s) => s.type !== 'SATUAN'))
-        setAdditionalServices(data.filter((s) => s.type === 'SATUAN'))
+        const mains = data.filter((s) => s.type !== 'SATUAN')
+        const adds = data.filter((s) => s.type === 'SATUAN')
+        setMainServices(mains)
+        setAdditionalServices(adds)
+        setSelectedMainServiceId((prev) => prev ?? mains[0]?.id ?? null)
       })
       .catch((err) => console.error('Failed to load service catalog', err))
   }, [])
 
-  const mainService = mainServices[0] ?? null
+  const mainService =
+    mainServices.find((s) => s.id === selectedMainServiceId) ?? mainServices[0] ?? null
 
   // Pelanggan & pencarian/tambah pelanggan pada drawer Tambah Pesanan — dicari
   // langsung ke backend, bukan dari array lokal.
@@ -225,12 +203,20 @@ export default function OrderListView() {
       .catch((err) => console.error('Failed to load order detail', err))
   }, [editStatusOrderId])
 
-  // QuickChat: daftar percakapan + overlay — data dan bentuk sama seperti di
-  // DashboardView.jsx. TODO: satukan lewat context/hook bersama begitu chat
-  // punya backend sungguhan, biar Dashboard & Pesanan share satu sumber data.
-  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS)
-  const [activeChatId, setActiveChatId] = useState(INITIAL_CONVERSATIONS[0]?.id ?? null)
+  // QuickChat: daftar percakapan + overlay — data dari GET /chat/conversations.
+  const [conversations, setConversations] = useState([])
+  const [activeChatId, setActiveChatId] = useState(null)
   const [isQuickChatOpen, setIsQuickChatOpen] = useState(false)
+
+  useEffect(() => {
+    getConversations()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : []
+        setConversations(list)
+        setActiveChatId((prev) => prev ?? list[0]?.id ?? null)
+      })
+      .catch((err) => console.error('Gagal memuat chat', err))
+  }, [])
 
   const activeConversation = conversations.find((c) => c.id === activeChatId) ?? null
   // Widget "Pesan Cepat" cuma nampilin satu preview — prioritaskan yang
@@ -242,12 +228,15 @@ export default function OrderListView() {
     setIsQuickChatOpen(true)
   }
 
-  const handleSendReply = (conversationId, replyText) => {
-    setConversations((prev) =>
-      prev.map((c) => (c.id === conversationId ? { ...c, replied: true } : c))
-    )
-    // TODO: kirim ke backend begitu endpoint chat tersedia.
-    console.log('Kirim balasan ke', conversationId, ':', replyText)
+  const handleSendReply = async (conversationId, replyText) => {
+    try {
+      await replyToConversation(conversationId, replyText)
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, replied: true, lastMessage: replyText } : c))
+      )
+    } catch (error) {
+      console.error('Gagal mengirim balasan', error)
+    }
   }
 
   const isPanelFilterActive =
@@ -353,6 +342,7 @@ export default function OrderListView() {
     setKiloanWeight('')
     setAdditionalQty({})
     setSubmitError('')
+    setPaymentMethod('CASH')
   }
 
   // Satu order backend hanya boleh punya satu serviceId, jadi tiap baris
@@ -379,6 +369,7 @@ export default function OrderListView() {
           serviceId: line.serviceId,
           weight: line.weight,
           itemCount: line.itemCount,
+          paymentMethod,
         })
       }
       setIsAddDrawerOpen(false)
@@ -858,11 +849,21 @@ export default function OrderListView() {
           </div>
 
               {/* Field 1: Layanan Utama */}
-              {mainService && (
+              {mainServices.length > 0 && (
                 <div className="flex flex-col gap-3">
                   <h4 className="text-body-md font-sans font-bold text-on-surface">Layanan utama</h4>
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-body-md text-on-surface font-medium">{mainService.name}</span>
+                  <div className="flex items-center justify-between gap-3 py-1">
+                    <select
+                      value={mainService?.id ?? ''}
+                      onChange={(e) => setSelectedMainServiceId(Number(e.target.value))}
+                      className="flex-1 bg-transparent border border-[#cbdff7] focus:border-primary rounded-xl px-3 py-2 text-body-md text-on-surface font-medium focus:outline-none shadow-sm"
+                    >
+                      {mainServices.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} {s.pricePerKg ? `— Rp ${s.pricePerKg.toLocaleString('id-ID')}/kg` : ''}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="number"
                       step="0.1"
@@ -896,6 +897,22 @@ export default function OrderListView() {
                   </div>
                 </div>
               )}
+
+              {/* Field 3: Metode Pembayaran */}
+              <div className="flex flex-col gap-3 border-t border-outline-variant/20 pt-4">
+                <h4 className="text-body-md font-sans font-bold text-on-surface">Metode Pembayaran</h4>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="bg-transparent border border-[#cbdff7] focus:border-primary rounded-xl px-3 py-2 text-body-md text-on-surface font-medium focus:outline-none shadow-sm"
+                >
+                  {Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               {/* Total Harga Breakdown */}
               {(() => {

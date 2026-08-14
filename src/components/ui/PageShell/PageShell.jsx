@@ -2,6 +2,10 @@ import { useNavigate } from 'react-router-dom'
 import Sidebar from '../Sidebar'
 import { useAuth } from '../../../context/AuthContext'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+const SERVER_ORIGIN = API_BASE.replace(/\/api\/?$/, '')
+const resolveUploadUrl = (url) => (url && !url.startsWith('http') ? `${SERVER_ORIGIN}${url}` : url)
+
 // Shared page frame used by every Sidebar-driven route: pins the sidebar to
 // the viewport height and scopes document scroll to `<main>` so the sidebar
 // never scrolls out of view. Extracted once so all pages share the same
@@ -21,7 +25,15 @@ export default function PageShell({ activeItemId, onItemClick, mainClassName = '
         activeItemId={activeItemId}
         onItemClick={onItemClick}
         onLogout={handleLogout}
-        user={user ? { name: user.name, role: user.role === 'ADMIN' ? 'Owner' : 'Staff', avatarUrl: null } : undefined}
+        user={
+          user
+            ? {
+                name: user.name,
+                role: user.role === 'ADMIN' ? 'Owner' : 'Staff',
+                avatarUrl: resolveUploadUrl(user.photoUrl),
+              }
+            : undefined
+        }
       />
       <main className={['flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar', mainClassName].filter(Boolean).join(' ')}>
         {children}

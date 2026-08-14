@@ -11,3 +11,27 @@ export async function updateProfile(payload) {
 export async function changePassword(payload) {
   return api.put('/me/password', payload)
 }
+
+export function getLaundryProfile() {
+  return api.get('/laundry-profile')
+}
+
+export function updateLaundryProfile(payload) {
+  return api.put('/laundry-profile', payload)
+}
+
+export function uploadFile(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post('/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export function getPaymentSettings() {
+  return api.get('/payment-settings')
+}
+
+export function updatePaymentSettings(payload) {
+  return api.put('/payment-settings', payload)
+}

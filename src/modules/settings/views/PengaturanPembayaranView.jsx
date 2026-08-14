@@ -8,6 +8,15 @@ import Button from '../../../components/ui/Button'
 import Toggle from '../../../components/ui/Toggle'
 import Modal from '../../../components/ui/Modal'
 import Divider from '../../../components/ui/Divider'
+import {
+  getPaymentSettings,
+  updatePaymentSettings,
+  uploadFile,
+} from '../services/settingsService'
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+const SERVER_ORIGIN = API_BASE.replace(/\/api\/?$/, '')
+const resolveUploadUrl = (url) => (url && !url.startsWith('http') ? `${SERVER_ORIGIN}${url}` : url)
 
 // TODO: sesuaikan kalau id menu Sidebar ternyata beda path-nya di AppRoutes
 const SIDEBAR_ROUTES = {
@@ -240,6 +249,7 @@ export default function PengaturanPembayaranView() {
   const [namaMerchant, setNamaMerchant] = useState('Utama Laundry')
   const [nmid, setNmid] = useState('ID12345678901')
   const [qrisPreview, setQrisPreview] = useState(null)
+  const [qrisImageUrl, setQrisImageUrl] = useState(null)
 
   // Rekening Bank/Transfer
   const [rekeningEnabled, setRekeningEnabled] = useState(true)
@@ -251,6 +261,35 @@ export default function PengaturanPembayaranView() {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState(null)
+
+  useEffect(() => {
+    getPaymentSettings()
+      .then((settings) => {
+        if (!settings) return
+        setQrisEnabled(settings.qrisEnabled ?? true)
+        setNamaMerchant(settings.qrisMerchantName ?? '')
+        setNmid(settings.qrisNmid ?? '')
+        setQrisPreview(resolveUploadUrl(settings.qrisImageUrl))
+        setQrisImageUrl(settings.qrisImageUrl)
+        setRekeningEnabled(settings.transferEnabled ?? true)
+        setTunaiEnabled(settings.cashEnabled ?? true)
+        if (Array.isArray(settings.bankAccounts) && settings.bankAccounts.length > 0) {
+          setAccounts(
+            settings.bankAccounts.map((a) => ({
+              id: a.id,
+              bankName: a.bankName,
+              noRekening: a.noRekening,
+              namaPemilik: a.namaPemilik,
+              enabled: a.enabled,
+            }))
+          )
+          nextAccountId = Math.max(...settings.bankAccounts.map((a) => a.id)) + 1
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   function handleSidebarItemClick(item) {
     const path = SIDEBAR_ROUTES[item.id]
@@ -265,16 +304,65 @@ export default function PengaturanPembayaranView() {
     qrisInputRef.current?.click()
   }
 
-  function handleQrisFileChange(e) {
+  async function handleQrisFileChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    // TODO: upload file ke backend, sementara cuma preview lokal
-    setQrisPreview(URL.createObjectURL(file))
+    try {
+      setMessage(null)
+      const { url } = await uploadFile(file)
+      setQrisImageUrl(url)
+      setQrisPreview(resolveUploadUrl(url))
+    } catch (error) {
+      setMessage(error.message || 'Gagal mengunggah QRIS')
+    }
   }
 
   function handleRemoveQris() {
     setQrisPreview(null)
+    setQrisImageUrl(null)
     if (qrisInputRef.current) qrisInputRef.current.value = ''
+  }
+
+  async function handleDownloadQris() {
+    if (!qrisImageUrl) return
+    try {
+      const res = await fetch(resolveUploadUrl(qrisImageUrl))
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `qris-${nmid || 'laundry'}.png`
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      setMessage(error.message || 'Gagal mengunduh QRIS')
+    }
+  }
+
+  async function handleSave() {
+    try {
+      setSaving(true)
+      setMessage(null)
+      await updatePaymentSettings({
+        qrisEnabled,
+        qrisMerchantName: namaMerchant,
+        qrisNmid: nmid,
+        qrisImageUrl,
+        cashEnabled: tunaiEnabled,
+        transferEnabled: rekeningEnabled,
+        bankAccounts: accounts.map((a) => ({
+          bankName: a.bankName,
+          noRekening: a.noRekening,
+          namaPemilik: a.namaPemilik,
+          enabled: a.enabled,
+        })),
+      })
+      setMessage('Pengaturan pembayaran berhasil disimpan')
+    } catch (error) {
+      setMessage(error.message || 'Gagal menyimpan pengaturan')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function openAddModal() {
@@ -393,6 +481,16 @@ export default function PengaturanPembayaranView() {
                         Upload QRIS
                       </Button>
                       <Button
+                        variant="secondary"
+                        appearance="outlined"
+                        onClick={handleDownloadQris}
+                        disabled={!qrisImageUrl}
+                        startIcon={<Icon name="download" size={15} className="text-primary" />}
+                        className="!h-[42px] !flex-1 !whitespace-nowrap !rounded-lg !px-4 !py-2.5 font-body !text-[13px] !font-medium"
+                      >
+                        Unduh
+                      </Button>
+                      <Button
                         variant="danger"
                         appearance="solid"
                         onClick={handleRemoveQris}
@@ -460,6 +558,29 @@ export default function PengaturanPembayaranView() {
               Tunai
             </Typography>
             <Toggle checked={tunaiEnabled} onChange={setTunaiEnabled} />
+          </div>
+
+          {/* ===== Simpan ===== */}
+          <div className="flex items-center justify-end gap-4">
+            {message && (
+              <Typography
+                variant="body-sm"
+                className={
+                  message.includes('berhasil') ? 'text-primary' : 'text-error'
+                }
+              >
+                {message}
+              </Typography>
+            )}
+            <Button
+              variant="primary"
+              appearance="solid"
+              onClick={handleSave}
+              disabled={saving}
+              className="!h-11 !rounded-lg !px-6 !text-[14px]"
+            >
+              {saving ? 'Menyimpan...' : 'Simpan Pengaturan'}
+            </Button>
           </div>
         </div>
       </div>

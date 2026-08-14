@@ -22,10 +22,12 @@ export const Disabled = {
   args: { checked: true, disabled: true },
 }
 
+function InteractiveToggle(args) {
+  const [checked, setChecked] = useState(args.checked ?? false)
+  return <Toggle {...args} checked={checked} onChange={setChecked} />
+}
+
 export const Interactive = {
-  render: (args) => {
-    const [checked, setChecked] = useState(args.checked ?? false)
-    return <Toggle {...args} checked={checked} onChange={setChecked} />
-  },
+  render: (args) => <InteractiveToggle {...args} />,
   args: { checked: false },
 }

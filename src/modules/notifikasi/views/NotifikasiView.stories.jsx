@@ -16,8 +16,4 @@ export default {
 
 export const Default = {}
 
-export const Kosong = {
-  args: {
-    initialNotifications: [],
-  },
-}
+export const Kosong = {}

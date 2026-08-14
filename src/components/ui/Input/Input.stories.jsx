@@ -79,23 +79,25 @@ export const Disabled = {
   },
 }
 
-export const Interactive = {
-  render: () => {
-    const [value, setValue] = useState('Input')
+function InteractiveInput() {
+  const [value, setValue] = useState('Input')
 
-    return (
-      <Input
-        label="Label"
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        helperText="Supporting text"
-        variant="filled"
-        startIcon={<Icon name="search" size={20} />}
-        showClear
-        onClear={() => setValue('')}
-      />
-    )
-  },
+  return (
+    <Input
+      label="Label"
+      value={value}
+      onChange={(event) => setValue(event.target.value)}
+      helperText="Supporting text"
+      variant="filled"
+      startIcon={<Icon name="search" size={20} />}
+      showClear
+      onClear={() => setValue('')}
+    />
+  )
+}
+
+export const Interactive = {
+  render: () => <InteractiveInput />,
 }
 
 export const StateMatrix = {
