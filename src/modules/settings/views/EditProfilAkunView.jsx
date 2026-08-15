@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../../../components/ui/Icon'
 import Input from '../../../components/ui/Input'
@@ -7,6 +7,10 @@ import Button from '../../../components/ui/Button'
 import Sidebar from '../../../components/ui/Sidebar'
 import ProfilePhotoCard from '../components/ProfilePhotoCard'
 import PasswordFormCard from '../components/PasswordFormCard'
+import { useAuth } from '../../../context/AuthContext'
+import { updateProfile, changePassword } from '../services/settingsService'
+import { uploadFile } from '../../../services/uploadService'
+import { getAssetUrl } from '../../../services/api'
 
 // TODO: sesuaikan kalau id menu Sidebar ternyata beda path-nya di AppRoutes
 const SIDEBAR_ROUTES = {
@@ -21,20 +25,53 @@ const SIDEBAR_ROUTES = {
 
 export default function EditProfilAkunView() {
   const navigate = useNavigate()
+  const { user, updateUser } = useAuth()
   const [username, setUsername] = useState('')
   const [phone, setPhone] = useState('')
   const [photoUrl, setPhotoUrl] = useState(null)
+  const [profileError, setProfileError] = useState('')
+  const [profileSuccess, setProfileSuccess] = useState('')
+  const [savingProfile, setSavingProfile] = useState(false)
 
-  function handleSaveProfile() {
-    // TODO: hook up to API — save { username, phone }
+  useEffect(() => {
+    if (user) {
+      setUsername(user.name || '')
+      setPhone(user.phone || '')
+      setPhotoUrl(getAssetUrl(user.photoUrl))
+    }
+  }, [user])
+
+  async function handleSaveProfile() {
+    setProfileError('')
+    setProfileSuccess('')
+    setSavingProfile(true)
+    try {
+      const updated = await updateProfile({ name: username, phone })
+      updateUser(updated || { name: username, phone })
+      setProfileSuccess('Profil berhasil disimpan')
+    } catch (err) {
+      setProfileError(err.message || 'Gagal menyimpan profil')
+    } finally {
+      setSavingProfile(false)
+    }
   }
 
-  function handleUpdatePassword(values) {
-    // TODO: hook up to API — { oldPassword, newPassword, confirmPassword }
+  async function handleUpdatePassword({ oldPassword, newPassword }) {
+    await changePassword({ oldPassword, newPassword })
   }
 
-  function handlePhotoChange(file) {
-    setPhotoUrl(URL.createObjectURL(file))
+  async function handlePhotoChange(file) {
+    const previousUrl = photoUrl
+    setPhotoUrl(URL.createObjectURL(file)) // instant preview while it uploads
+    try {
+      const uploadedUrl = await uploadFile(file)
+      const updated = await updateProfile({ photoUrl: uploadedUrl })
+      updateUser(updated || { photoUrl: uploadedUrl })
+      setPhotoUrl(getAssetUrl(uploadedUrl))
+    } catch (err) {
+      setPhotoUrl(previousUrl)
+      setProfileError(err.message || 'Gagal mengunggah foto profil')
+    }
   }
 
   function handleSidebarItemClick(item) {
@@ -79,13 +116,25 @@ export default function EditProfilAkunView() {
                   onChange={(e) => setPhone(e.target.value)}
                   className="!h-9 !w-full !max-w-[411px] !gap-2.5 !rounded-lg !border !border-[#89D0ED] !bg-[#B9EAFF4D] !px-[15px] !py-[5px]"
                 />
+                {profileError && (
+                  <Typography variant="body-sm" className="!text-[12px] text-error">
+                    {profileError}
+                  </Typography>
+                )}
+                {profileSuccess && (
+                  <Typography variant="body-sm" className="!text-[12px] text-primary">
+                    {profileSuccess}
+                  </Typography>
+                )}
+
                 <Button
                   variant="primary"
                   appearance="solid"
                   onClick={handleSaveProfile}
+                  disabled={savingProfile}
                   className="w-fit self-end !text-[12px]"
                 >
-                  Simpan Profil
+                  {savingProfile ? 'Menyimpan...' : 'Simpan Profil'}
                 </Button>
               </div>
 

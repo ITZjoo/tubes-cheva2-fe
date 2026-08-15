@@ -8,6 +8,9 @@ import Button from '../../../components/ui/Button'
 import Toggle from '../../../components/ui/Toggle'
 import Modal from '../../../components/ui/Modal'
 import Divider from '../../../components/ui/Divider'
+import { getPaymentSettings, updatePaymentSettings } from '../services/paymentSettingService'
+import { uploadFile } from '../../../services/uploadService'
+import { getAssetUrl } from '../../../services/api'
 
 // TODO: sesuaikan kalau id menu Sidebar ternyata beda path-nya di AppRoutes
 const SIDEBAR_ROUTES = {
@@ -41,17 +44,7 @@ const SECTION_TITLE_CLASS = 'font-sans !text-[20px] !font-semibold !leading-7 te
 // Deskripsi section: Urbanist 500 12px/180% #70787C
 const SECTION_DESC_CLASS = 'font-body text-[12px] font-medium leading-[180%] text-[#70787C]'
 
-let nextAccountId = 2
-
-const INITIAL_ACCOUNTS = [
-  {
-    id: 1,
-    bankName: 'Bank BCA',
-    noRekening: '12345678',
-    namaPemilik: 'Wati W',
-    enabled: true,
-  },
-]
+let nextTempAccountId = -1
 
 // Dropdown "Pilih Bank Rekening" — dibikin custom (bukan pakai Popover)
 // supaya z-index-nya bisa dipastikan tampil di atas Modal (Modal ada di z-30).
@@ -239,11 +232,11 @@ export default function PengaturanPembayaranView() {
   const [qrisEnabled, setQrisEnabled] = useState(true)
   const [namaMerchant, setNamaMerchant] = useState('Utama Laundry')
   const [nmid, setNmid] = useState('')
-  const [qrisPreview, setQrisPreview] = useState(null)
+  const [qrisImageUrl, setQrisImageUrl] = useState(null)
 
   // Rekening Bank/Transfer
   const [rekeningEnabled, setRekeningEnabled] = useState(true)
-  const [accounts, setAccounts] = useState(INITIAL_ACCOUNTS)
+  const [accounts, setAccounts] = useState([])
 
   // Tunai
   const [tunaiEnabled, setTunaiEnabled] = useState(true)
@@ -251,6 +244,71 @@ export default function PengaturanPembayaranView() {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState(null)
+
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [feedback, setFeedback] = useState({ type: null, message: '' })
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const settings = await getPaymentSettings()
+        if (!settings) return
+        setQrisEnabled(settings.qrisEnabled ?? true)
+        setNamaMerchant(settings.qrisMerchantName ?? 'Utama Laundry')
+        setNmid(settings.qrisNmid ?? '')
+        setQrisImageUrl(settings.qrisImageUrl ?? null)
+        setRekeningEnabled(settings.transferEnabled ?? true)
+        setTunaiEnabled(settings.cashEnabled ?? true)
+        setAccounts(settings.bankAccounts ?? [])
+      } catch (err) {
+        console.error('Gagal memuat pengaturan pembayaran', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadSettings()
+  }, [])
+
+  // Every toggle / account change / QRIS upload persists the whole document —
+  // there's no separate "Simpan" button in this view by design, so each
+  // action below calls this right after updating local state.
+  async function persist(overrides = {}) {
+    setSaving(true)
+    setFeedback({ type: null, message: '' })
+    try {
+      const payload = {
+        qrisEnabled,
+        qrisMerchantName: namaMerchant,
+        qrisNmid: nmid,
+        qrisImageUrl,
+        cashEnabled: tunaiEnabled,
+        transferEnabled: rekeningEnabled,
+        bankAccounts: accounts.map(({ bankName, noRekening, namaPemilik, enabled }) => ({
+          bankName,
+          noRekening,
+          namaPemilik,
+          enabled,
+        })),
+        ...overrides,
+      }
+      const updated = await updatePaymentSettings(payload)
+      if (updated) {
+        setQrisEnabled(updated.qrisEnabled ?? payload.qrisEnabled)
+        setNamaMerchant(updated.qrisMerchantName ?? payload.qrisMerchantName)
+        setNmid(updated.qrisNmid ?? payload.qrisNmid)
+        setQrisImageUrl(updated.qrisImageUrl ?? payload.qrisImageUrl)
+        setRekeningEnabled(updated.transferEnabled ?? payload.transferEnabled)
+        setTunaiEnabled(updated.cashEnabled ?? payload.cashEnabled)
+        setAccounts(updated.bankAccounts ?? payload.bankAccounts)
+      }
+      setFeedback({ type: 'success', message: 'Pengaturan pembayaran tersimpan' })
+    } catch (err) {
+      setFeedback({ type: 'error', message: err.message || 'Gagal menyimpan pengaturan pembayaran' })
+    } finally {
+      setSaving(false)
+    }
+  }
 
   function handleSidebarItemClick(item) {
     const path = SIDEBAR_ROUTES[item.id]
@@ -265,16 +323,22 @@ export default function PengaturanPembayaranView() {
     qrisInputRef.current?.click()
   }
 
-  function handleQrisFileChange(e) {
+  async function handleQrisFileChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    // TODO: upload file ke backend, sementara cuma preview lokal
-    setQrisPreview(URL.createObjectURL(file))
+    try {
+      const url = await uploadFile(file)
+      setQrisImageUrl(url)
+      await persist({ qrisImageUrl: url })
+    } catch (err) {
+      setFeedback({ type: 'error', message: err.message || 'Gagal mengunggah QRIS' })
+    }
   }
 
-  function handleRemoveQris() {
-    setQrisPreview(null)
+  async function handleRemoveQris() {
+    setQrisImageUrl(null)
     if (qrisInputRef.current) qrisInputRef.current.value = ''
+    await persist({ qrisImageUrl: null })
   }
 
   function openAddModal() {
@@ -287,21 +351,72 @@ export default function PengaturanPembayaranView() {
     setIsModalOpen(true)
   }
 
-  function handleSaveAccount(values) {
+  async function handleSaveAccount(values) {
+    let nextAccounts
     if (editingAccount) {
-      setAccounts((prev) => prev.map((acc) => (acc.id === editingAccount.id ? { ...acc, ...values } : acc)))
+      nextAccounts = accounts.map((acc) => (acc.id === editingAccount.id ? { ...acc, ...values } : acc))
     } else {
-      setAccounts((prev) => [...prev, { id: nextAccountId++, enabled: true, ...values }])
+      nextAccounts = [...accounts, { id: nextTempAccountId--, enabled: true, ...values }]
     }
+    setAccounts(nextAccounts)
     setIsModalOpen(false)
+    await persist({
+      bankAccounts: nextAccounts.map(({ bankName, noRekening, namaPemilik, enabled }) => ({
+        bankName,
+        noRekening,
+        namaPemilik,
+        enabled,
+      })),
+    })
   }
 
-  function handleDeleteAccount(id) {
-    setAccounts((prev) => prev.filter((acc) => acc.id !== id))
+  async function handleDeleteAccount(id) {
+    const nextAccounts = accounts.filter((acc) => acc.id !== id)
+    setAccounts(nextAccounts)
+    await persist({
+      bankAccounts: nextAccounts.map(({ bankName, noRekening, namaPemilik, enabled }) => ({
+        bankName,
+        noRekening,
+        namaPemilik,
+        enabled,
+      })),
+    })
   }
 
-  function handleToggleAccount(id) {
-    setAccounts((prev) => prev.map((acc) => (acc.id === id ? { ...acc, enabled: !acc.enabled } : acc)))
+  async function handleToggleAccount(id) {
+    const nextAccounts = accounts.map((acc) => (acc.id === id ? { ...acc, enabled: !acc.enabled } : acc))
+    setAccounts(nextAccounts)
+    await persist({
+      bankAccounts: nextAccounts.map(({ bankName, noRekening, namaPemilik, enabled }) => ({
+        bankName,
+        noRekening,
+        namaPemilik,
+        enabled,
+      })),
+    })
+  }
+
+  function handleQrisToggle(value) {
+    setQrisEnabled(value)
+    persist({ qrisEnabled: value })
+  }
+
+  function handleRekeningToggle(value) {
+    setRekeningEnabled(value)
+    persist({ transferEnabled: value })
+  }
+
+  function handleTunaiToggle(value) {
+    setTunaiEnabled(value)
+    persist({ cashEnabled: value })
+  }
+
+  function handleMerchantBlur() {
+    persist({ qrisMerchantName: namaMerchant })
+  }
+
+  function handleNmidBlur() {
+    persist({ qrisNmid: nmid })
   }
 
   return (
@@ -335,7 +450,7 @@ export default function PengaturanPembayaranView() {
                     Unggah barcode QRIS toko Anda agar otomatis tampil di nota.
                   </Typography>
                 </div>
-                <Toggle checked={qrisEnabled} onChange={setQrisEnabled} />
+                <Toggle checked={qrisEnabled} onChange={handleQrisToggle} />
               </div>
 
               {qrisEnabled && (
@@ -349,6 +464,7 @@ export default function PengaturanPembayaranView() {
                         <Input
                           value={namaMerchant}
                           onChange={(e) => setNamaMerchant(e.target.value)}
+                          onBlur={handleMerchantBlur}
                           className={`!h-9 ${PLACEHOLDER_BOX_CLASS}`}
                         />
                       </div>
@@ -359,6 +475,7 @@ export default function PengaturanPembayaranView() {
                         <Input
                           value={nmid}
                           onChange={(e) => setNmid(e.target.value)}
+                          onBlur={handleNmidBlur}
                           className={`!h-9 ${PLACEHOLDER_BOX_CLASS}`}
                         />
                       </div>
@@ -370,9 +487,9 @@ export default function PengaturanPembayaranView() {
                         onClick={handleUploadQrisClick}
                         className="flex h-[185px] w-full flex-col items-center justify-center gap-2.5 rounded-lg border border-dashed border-[#89D0ED] bg-[#B9EAFF4D] px-[15px] py-2.5 text-on-surface-variant transition-colors hover:bg-[#B9EAFF80]"
                       >
-                        {qrisPreview ? (
+                        {qrisImageUrl ? (
                           <img
-                            src={qrisPreview}
+                            src={getAssetUrl(qrisImageUrl)}
                             alt="Preview QRIS"
                             className="h-full w-full rounded-lg object-contain"
                           />
@@ -426,7 +543,7 @@ export default function PengaturanPembayaranView() {
                     Rekening Bank yang akan ditampilkan pada nota.
                   </Typography>
                 </div>
-                <Toggle checked={rekeningEnabled} onChange={setRekeningEnabled} />
+                <Toggle checked={rekeningEnabled} onChange={handleRekeningToggle} />
               </div>
 
               {rekeningEnabled && (
@@ -459,8 +576,17 @@ export default function PengaturanPembayaranView() {
               <Typography variant="label-lg" className={SECTION_TITLE_CLASS}>
                 Tunai
               </Typography>
-              <Toggle checked={tunaiEnabled} onChange={setTunaiEnabled} />
+              <Toggle checked={tunaiEnabled} onChange={handleTunaiToggle} />
             </div>
+
+            {feedback.message && (
+              <Typography
+                variant="body-sm"
+                className={`!text-[12px] ${feedback.type === 'error' ? 'text-error' : 'text-primary'}`}
+              >
+                {saving ? 'Menyimpan...' : feedback.message}
+              </Typography>
+            )}
           </div>
         </div>
       </div>

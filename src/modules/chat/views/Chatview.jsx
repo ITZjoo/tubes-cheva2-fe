@@ -1,38 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import PageShell from '../../../components/ui/PageShell'
 import useSidebarNavigate from '../../../routes/useSidebarNavigate'
 import ChatList from '../components/ChatList'
 import ChatDetailPanel from '../components/ChatDetailPanel'
-
-// TODO: ganti dengan chatService begitu backend punya endpoint/model Message.
-// Untuk sekarang data contoh, sama polanya kayak chatMessages lokal di
-// DashboardView.jsx / OrderListView.jsx yang sudah ada.
-const INITIAL_CONVERSATIONS = [
-  {
-    id: 1,
-    name: 'Rani Puspita',
-    role: 'Pelanggan',
-    time: '10 menit lalu',
-    lastMessage: 'Kapan pesanan saya selesai ?',
-    replied: false,
-    trxId: 'TRX/0023400501',
-    date: '22 Juni 2026',
-    question: 'Kapan pesanan saya selesai ?',
-    questionTime: '10 menit lalu',
-  },
-  {
-    id: 2,
-    name: 'Alberto',
-    role: 'Pelanggan',
-    time: '15 menit lalu',
-    lastMessage: 'Apakah sudah bisa diambil ?',
-    replied: true,
-    trxId: 'TRX/0023300502',
-    date: '22 Juni 2026',
-    question: 'Apakah sudah bisa diambil ?',
-    questionTime: '15 menit lalu',
-  },
-]
+import * as chatService from '../services/chatService'
 
 // Halaman penuh untuk "Lihat semua" chat — dipanggil dari widget "Pesan
 // Terbaru" di Dashboard/Pesanan. Daftarkan route-nya sendiri di
@@ -41,17 +12,41 @@ const INITIAL_CONVERSATIONS = [
 export default function ChatView() {
   const handleSidebarNavigate = useSidebarNavigate()
 
-  const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS)
-  const [activeId, setActiveId] = useState(INITIAL_CONVERSATIONS[0]?.id ?? null)
+  const [conversations, setConversations] = useState([])
+  const [activeId, setActiveId] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  const loadConversations = async () => {
+    try {
+      setLoading(true)
+      const data = await chatService.listConversations()
+      setConversations(data)
+      setActiveId((prev) => prev ?? data[0]?.id ?? null)
+    } catch (err) {
+      console.error('Gagal memuat percakapan', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadConversations()
+  }, [])
 
   const activeConversation = conversations.find((c) => c.id === activeId) ?? null
 
-  const handleSendReply = (conversationId, replyText) => {
+  const handleSendReply = async (conversationId, replyText) => {
     setConversations((prev) =>
       prev.map((c) => (c.id === conversationId ? { ...c, replied: true } : c))
     )
-    // TODO: kirim ke backend begitu endpoint chat tersedia.
-    console.log('Kirim balasan ke', conversationId, ':', replyText)
+    try {
+      await chatService.replyToConversation(conversationId, replyText)
+      await loadConversations()
+    } catch (err) {
+      console.error('Gagal mengirim balasan', err)
+      // Roll back the optimistic "replied" flag if the request actually failed.
+      await loadConversations()
+    }
   }
 
   return (
