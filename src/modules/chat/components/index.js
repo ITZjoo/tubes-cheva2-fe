@@ -1,5 +1,5 @@
 export { default as ChatList } from './ChatList'
 export { default as ChatDetailPanel } from './ChatDetailPanel'
-export { default as QuickReplyChips } from './QuickReplyChips'
+export { default as HistoryList } from './HistoryList'
 export { default as QuickChatModal } from './QuickChatModal'
 export { default as PesanCepatCard } from './PesanCepatCard'

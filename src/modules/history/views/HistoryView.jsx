@@ -46,7 +46,10 @@ export default function HistoryView() {
         })
         .catch((error) => {
           if (cancelled) return
-          setErrorMessage(error.message || 'Gagal memuat riwayat')
+          // A 404 here means the route itself doesn't exist (framework
+          // fallback text like "Route not found"), not a real business
+          // error message — don't leak that raw text to the user.
+          setErrorMessage(error.status === 404 ? 'Gagal memuat riwayat' : error.message || 'Gagal memuat riwayat')
         })
         .finally(() => {
           if (!cancelled) setIsLoading(false)
@@ -112,9 +115,12 @@ export default function HistoryView() {
 
         <div className="min-h-[708px] rounded-2xl bg-surface-container-lowest border border-outline-variant p-6 shadow-sm">
           {errorMessage ? (
-            <Typography variant="body-md" className="py-16 text-center text-error">
-              {errorMessage}
-            </Typography>
+            <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+              <Icon name="error" size={36} className="text-error" />
+              <Typography variant="body-md" className="text-error font-semibold">
+                {errorMessage}
+              </Typography>
+            </div>
           ) : isLoading ? (
             <Typography variant="body-md" className="py-16 text-center text-on-surface-variant">
               Memuat riwayat...

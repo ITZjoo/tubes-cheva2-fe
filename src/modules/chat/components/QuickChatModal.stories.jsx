@@ -1,82 +1,74 @@
 import { useState } from 'react'
 import QuickChatModal from './QuickChatModal'
 
-const MOCK_CONVERSATIONS = [
+const MOCK_QUESTIONS = [
+  { id: 1, category: 'PESANAN', question: 'Kapan pesanan saya selesai?', answer: 'Estimasi selesai 1x24 jam sejak pesanan diterima.' },
+  { id: 2, category: 'PESANAN', question: 'Apakah sudah bisa diambil?', answer: 'Pesanan bisa diambil setelah status "Siap Diambil".' },
+  { id: 3, category: 'PEMBAYARAN', question: 'Berapa total pesanan saya?', answer: 'Silakan cek nomor pesanan Anda di halaman riwayat transaksi.' },
+]
+
+const MOCK_HISTORY = [
   {
     id: 1,
-    name: 'Rani Puspita',
-    role: 'Pelanggan',
-    time: '10 menit lalu',
-    lastMessage: 'Kapan pesanan saya selesai ?',
-    replied: false,
-    trxId: 'TRX/0023400501',
-    date: '22 Juni 2026',
-    question: 'Kapan pesanan saya selesai ?',
-    questionTime: '10 menit lalu',
-  },
-  {
-    id: 2,
-    name: 'Alberto',
-    role: 'Pelanggan',
-    time: '15 menit lalu',
-    lastMessage: 'Apakah sudah bisa diambil ?',
-    replied: false,
-    trxId: 'TRX/0023300502',
-    date: '22 Juni 2026',
-    question: 'Apakah sudah bisa diambil ?',
-    questionTime: '15 menit lalu',
-  },
-  {
-    id: 3,
-    name: 'Azzam',
-    role: 'Pelanggan',
-    time: '31 menit lalu',
-    lastMessage: 'Berapa total pesanan saya ?',
-    replied: true,
-    trxId: 'TRX/0023200503',
-    date: '22 Juni 2026',
-    question: 'Berapa total pesanan saya ?',
-    questionTime: '31 menit lalu',
+    questionText: 'Kapan pesanan saya selesai?',
+    answerText: 'Estimasi selesai 1x24 jam sejak pesanan diterima.',
+    createdAt: new Date().toISOString(),
+    cannedQuestion: { category: 'PESANAN' },
+    customer: { name: 'Rani Puspita' },
   },
 ]
+
+// Bikin mock `center` (bentuknya sama kayak return value useCannedQuestionCenter())
+// biar story ini nggak butuh backend beneran buat dijalanin di Storybook.
+function useMockCenter() {
+  const [tab, setTab] = useState('lookup')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeQuestionId, setActiveQuestionId] = useState(MOCK_QUESTIONS[0].id)
+  const [askState, setAskState] = useState('idle')
+
+  const filtered = MOCK_QUESTIONS.filter((q) =>
+    searchQuery ? q.question.toLowerCase().includes(searchQuery.toLowerCase()) : true
+  )
+
+  return {
+    tab,
+    setTab,
+    questions: filtered,
+    loadingQuestions: false,
+    searchQuery,
+    setSearchQuery,
+    activeQuestionId,
+    selectQuestion: (id) => {
+      setActiveQuestionId(id)
+      setAskState('idle')
+    },
+    activeQuestion: MOCK_QUESTIONS.find((q) => q.id === activeQuestionId) ?? null,
+    askState,
+    lastAskedAt: new Date().toISOString(),
+    askActiveQuestion: () => setAskState('saved'),
+    history: MOCK_HISTORY,
+    loadingHistory: false,
+    historyError: null,
+  }
+}
 
 export default {
   title: 'Modules/Chat/QuickChatModal',
   component: QuickChatModal,
 }
 
-// Wrapper interaktif — Storybook butuh state hidup buat nyobain klik list,
-// pilih jawaban cepat, dan lihat dot merah toggle beneran.
 function InteractiveTemplate() {
   const [open, setOpen] = useState(true)
-  const [conversations, setConversations] = useState(MOCK_CONVERSATIONS)
-  const [activeId, setActiveId] = useState(MOCK_CONVERSATIONS[0].id)
-
-  const activeConversation = conversations.find((c) => c.id === activeId) ?? null
-
-  const handleSendReply = (conversationId, replyText) => {
-    setConversations((prev) =>
-      prev.map((c) => (c.id === conversationId ? { ...c, replied: true } : c))
-    )
-    console.log('Kirim balasan ke', conversationId, ':', replyText)
-  }
+  const center = useMockCenter()
 
   return (
     <div>
       {!open && (
         <button onClick={() => setOpen(true)} className="px-4 py-2 bg-primary text-on-primary rounded-lg">
-          Buka Quick Chat
+          Buka Pesan Cepat
         </button>
       )}
-      <QuickChatModal
-        open={open}
-        onClose={() => setOpen(false)}
-        conversations={conversations}
-        activeConversationId={activeId}
-        onSelectConversation={setActiveId}
-        activeConversation={activeConversation}
-        onSendReply={handleSendReply}
-      />
+      <QuickChatModal open={open} onClose={() => setOpen(false)} center={center} />
     </div>
   )
 }
@@ -85,18 +77,30 @@ export const Default = {
   render: () => <InteractiveTemplate />,
 }
 
-// State kosong — pastiin fallback text "Belum ada percakapan" & "Pilih
-// percakapan di sebelah kiri" beneran muncul, bukan blank/error.
+// State kosong — pastiin fallback text "Tidak ada pertanyaan ditemukan" &
+// "Pilih pertanyaan di sebelah kiri" beneran muncul, bukan blank/error.
 export const EmptyState = {
   render: () => (
     <QuickChatModal
       open={true}
       onClose={() => {}}
-      conversations={[]}
-      activeConversationId={null}
-      onSelectConversation={() => {}}
-      activeConversation={null}
-      onSendReply={() => {}}
+      center={{
+        tab: 'lookup',
+        setTab: () => {},
+        questions: [],
+        loadingQuestions: false,
+        searchQuery: '',
+        setSearchQuery: () => {},
+        activeQuestionId: null,
+        selectQuestion: () => {},
+        activeQuestion: null,
+        askState: 'idle',
+        lastAskedAt: null,
+        askActiveQuestion: () => {},
+        history: [],
+        loadingHistory: false,
+        historyError: null,
+      }}
     />
   ),
 }

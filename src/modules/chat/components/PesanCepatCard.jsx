@@ -1,15 +1,27 @@
+function timeAgo(iso) {
+  if (!iso) return ''
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const minutes = Math.floor(diffMs / 60000)
+  if (minutes < 1) return 'Baru saja'
+  if (minutes < 60) return `${minutes} menit lalu`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} jam lalu`
+  return `${Math.floor(hours / 24)} hari lalu`
+}
+
 /**
- * PesanCepatCard — widget "Pesan Cepat" yang muncul di Dashboard & Pesanan.
- * Beda dari QuickChatModal: ini cuma preview SATU percakapan (bukan list),
- * dipakai buat mancing klik ke overlay penuh.
+ * PesanCepatCard — widget "Pesan Cepat" di Dashboard: preview lookup FAQ
+ * terakhir yang dicatat (dari GET /canned-questions/history), plus tombol
+ * buat buka QuickChatModal (cari & catat jawaban baru).
  *
  * Props:
- * - conversation: { name, role, lastMessage, time } | null — percakapan yang ditonjolkan
- *   (biasanya yang belum dibalas, fallback ke percakapan pertama)
- * - onLihatSemua: () => void — buka QuickChatModal dengan seluruh list
- * - onJawab: () => void — buka QuickChatModal langsung ke `conversation` ini
+ * - center: return value dari useCannedQuestionCenter()
+ * - onLihatSemua: () => void
  */
-export default function PesanCepatCard({ conversation, onLihatSemua, onJawab }) {
+export default function PesanCepatCard({ center, onLihatSemua }) {
+  const { history, loadingHistory } = center
+  const latest = history[0] ?? null
+
   return (
     <div className="w-full bg-surface-container-lowest rounded-[18px] p-6 shadow-[0px_1px_8px_0px_#0000001A] flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -23,45 +35,40 @@ export default function PesanCepatCard({ conversation, onLihatSemua, onJawab }) 
         </button>
       </div>
 
-      {conversation ? (
-        <>
-          <div className="flex items-start gap-3">
-            <img
-              src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"
-              alt={conversation.name}
-              className="w-11 h-11 rounded-full object-cover shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-label-sm font-bold text-on-surface truncate">{conversation.name}</span>
-                    <span className="text-[12px] font-normal leading-[1.2] font-body text-secondary">
-                      {conversation.role ?? 'Pelanggan'}
-                    </span>
-                  </div>
-                  <p className="text-[12px] font-normal leading-[1.8] font-body text-on-surface mt-1">
-                    {conversation.lastMessage}
-                  </p>
-                </div>
-                <span className="text-body-sm text-outline shrink-0">{conversation.time}</span>
+      {loadingHistory ? (
+        <p className="text-body-sm text-on-surface-variant/70 text-center py-2">Memuat...</p>
+      ) : latest ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-label-sm font-bold text-on-surface truncate">
+                  {latest.customer?.name ?? 'Tanpa pelanggan'}
+                </span>
+                <span className="text-[12px] font-normal leading-[1.2] font-body text-secondary">
+                  {latest.cannedQuestion?.category ?? 'GENERAL'}
+                </span>
               </div>
+              <p className="text-[12px] font-normal leading-[1.8] font-body text-on-surface mt-1 line-clamp-2">
+                {latest.questionText}
+              </p>
             </div>
+            <span className="text-body-sm text-outline shrink-0">{timeAgo(latest.createdAt)}</span>
           </div>
 
           <div className="flex justify-end">
             <button
               type="button"
-              onClick={onJawab}
+              onClick={onLihatSemua}
               className="rounded-lg bg-primary-container/30 text-[12px] font-normal leading-[1.8] font-body text-primary cursor-pointer hover:bg-primary-container/45 transition-colors"
               style={{ width: 66, height: 28, padding: '3px 15px' }}
             >
-              Jawab
+              Buka
             </button>
           </div>
-        </>
+        </div>
       ) : (
-        <p className="text-body-sm text-on-surface-variant/70 text-center py-2">Belum ada pesan.</p>
+        <p className="text-body-sm text-on-surface-variant/70 text-center py-2">Belum ada pencarian jawaban.</p>
       )}
     </div>
   )

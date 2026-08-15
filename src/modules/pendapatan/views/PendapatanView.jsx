@@ -308,7 +308,7 @@ export default function PendapatanView() {
           />
         </div>
 
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4 min-h-[500px]">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4 h-[600px]">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <input
@@ -425,7 +425,7 @@ export default function PendapatanView() {
           <button
             type="button"
             onClick={() => setIsDrawerOpen(true)}
-            className="flex items-center justify-center gap-2 bg-primary text-on-primary font-sans font-bold py-2.5 px-4 rounded-xl transition-all duration-200 cursor-pointer shadow-sm hover:shadow hover:brightness-95 active:scale-[0.98] shrink-0"
+            className="flex items-center justify-center gap-2.5 self-end shrink-0 w-[187px] h-[41px] px-[18px] py-[5px] rounded-[8px_0px] bg-[#0A6780] text-white font-sans font-bold transition-all duration-200 cursor-pointer shadow-sm hover:brightness-95 active:scale-[0.98]"
           >
             <Icon name="add" size={18} />
             <span className="text-label-sm">Catat Pengeluaran</span>

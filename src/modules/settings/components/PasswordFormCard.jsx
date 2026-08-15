@@ -23,20 +23,42 @@ function PasswordVisibilityToggle({ visible, onToggle }) {
   )
 }
 
+// onSubmit(values) should return a Promise that resolves on success or
+// rejects with an Error (whose .message is shown) on failure.
 export default function PasswordFormCard({ onSubmit, onForgotPassword }) {
   const [values, setValues] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
   const [visibility, setVisibility] = useState({ oldPassword: false, newPassword: false, confirmPassword: false })
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(false)
 
   function handleChange(key, value) {
     setValues((prev) => ({ ...prev, [key]: value }))
+    setError(null)
+    setSuccess(false)
   }
 
   function toggleVisibility(key) {
     setVisibility((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
-  function handleSubmit() {
-    onSubmit?.(values)
+  async function handleSubmit() {
+    setSuccess(false)
+    if (!values.oldPassword) return setError('Password lama wajib diisi')
+    if (values.newPassword.length < 6) return setError('Password baru minimal 6 karakter')
+    if (values.newPassword !== values.confirmPassword) return setError('Konfirmasi password tidak cocok')
+
+    setError(null)
+    setSubmitting(true)
+    try {
+      await onSubmit?.(values)
+      setValues({ oldPassword: '', newPassword: '', confirmPassword: '' })
+      setSuccess(true)
+    } catch (err) {
+      setError(err.message || 'Gagal memperbarui password')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -68,8 +90,17 @@ export default function PasswordFormCard({ onSubmit, onForgotPassword }) {
         Forgot Password ?
       </button>
 
-      <Button variant="primary" appearance="solid" onClick={handleSubmit} className="w-fit self-end !text-[12px]">
-        Perbarui Password
+      {error && <p className="text-body-sm font-semibold text-error">{error}</p>}
+      {success && <p className="text-body-sm font-semibold text-success">Password berhasil diperbarui.</p>}
+
+      <Button
+        variant="primary"
+        appearance="solid"
+        onClick={handleSubmit}
+        disabled={submitting}
+        className="w-fit self-end !text-[12px]"
+      >
+        {submitting ? 'Menyimpan...' : 'Perbarui Password'}
       </Button>
     </div>
   )

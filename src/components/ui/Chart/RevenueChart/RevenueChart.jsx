@@ -125,7 +125,7 @@ export default function RevenueChart({
   return (
     <div
       className={`flex w-full flex-col rounded-[18px] bg-surface-container-lowest p-6 shadow-[0_1px_6px_0_rgba(0,0,0,0.10)] ${className}`}
-      style={{ maxWidth: CARD_WIDTH, aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}` }}
+      style={{ aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}` }}
     >
       <div className="mb-4 flex shrink-0 items-center justify-between gap-4">
         <Typography variant="label-lg" as="h3" className="leading-[140%]">
