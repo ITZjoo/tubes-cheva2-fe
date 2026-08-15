@@ -15,19 +15,22 @@ export function getExpense(id) {
   return api.get(`/expenses/${id}`)
 }
 
-// payload: { date, category, fundingSource, amount, description, receipt? }
-// If a receipt file is attached, send multipart/form-data; otherwise a plain
-// JSON body is enough. Adjust here if the backend expects a different field
-// name for the uploaded nota/struk.
-export function createExpense(payload) {
-  const { receipt, ...rest } = payload
-  if (!receipt) {
-    return api.post('/expenses', rest)
-  }
-  const formData = new FormData()
-  Object.entries(rest).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) formData.append(key, value)
+// Backend contract (src/validators/expense.validator.js + prisma Expense
+// model on tubes-cheva2-be): plain JSON body — { category, amount, source?,
+// description?, receiptProof?, spentAt? }. The schema is .strict(), so any
+// other key (e.g. the FE's old "fundingSource"/"receipt"/"date" names) gets
+// rejected outright. spentAt must be a FULL ISO datetime string (z.string()
+// .datetime()), not just "YYYY-MM-DD". There's no file-upload middleware on
+// this route — receiptProof is a URL string, so a receipt File must be
+// uploaded via POST /upload first (see uploadService.uploadFile) and only
+// the resulting URL passed here, exactly like the QRIS image flow.
+export function createExpense({ spentAt, category, source, amount, description, receiptProof } = {}) {
+  return api.post('/expenses', {
+    spentAt,
+    category,
+    source,
+    amount,
+    description,
+    receiptProof,
   })
-  formData.append('receipt', receipt)
-  return api.post('/expenses', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
 }
