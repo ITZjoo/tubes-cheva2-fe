@@ -3,7 +3,7 @@ import Drawer from '../../../components/ui/Drawer'
 import Icon from '../../../components/ui/Icon'
 import DatePickerPopover from '../../../components/ui/DatePicker/DatePickerPopover'
 import * as pendapatanService from '../services/pendapatanService'
-import { toDateStr } from '../utils/revenuePeriods'
+import { uploadFile } from '../../../services/uploadService'
 import { EXPENSE_CATEGORY_OPTIONS, FUNDING_SOURCE_OPTIONS } from '../../../constants/expenseOptions'
 
 const INITIAL_FORM = {
@@ -57,13 +57,21 @@ export default function CatatPengeluaranDrawer({ open, onClose, onSaved }) {
     setError('')
     setSubmitting(true)
     try {
+      // Backend's receiptProof is a URL string, not a raw file — upload it
+      // to /upload first (same flow as the QRIS image) and send only the
+      // resulting URL.
+      let receiptProof
+      if (form.receipt) {
+        receiptProof = await uploadFile(form.receipt)
+      }
+
       await pendapatanService.createExpense({
-        date: toDateStr(form.date),
+        spentAt: form.date.toISOString(),
         category: form.category,
-        fundingSource: form.fundingSource,
+        source: form.fundingSource,
         amount,
         description: form.description.trim() || undefined,
-        receipt: form.receipt || undefined,
+        receiptProof,
       })
       setForm(INITIAL_FORM)
       onSaved?.()
