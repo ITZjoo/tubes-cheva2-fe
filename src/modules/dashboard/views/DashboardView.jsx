@@ -67,6 +67,22 @@ function formatRupiah(amount) {
   return `Rp. ${(amount ?? 0).toLocaleString('id-ID')}`
 }
 
+// Small "+12% dari kemarin" / "-5% dari kemarin" badge for stat cards whose
+// backend value comes back as { value, change } (percent vs. yesterday).
+function ChangeBadge({ change }) {
+  if (change === undefined || change === null) return null
+  const isUp = change >= 0
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 text-[11px] font-bold ${isUp ? 'text-success' : 'text-error'}`}
+    >
+      <Icon name={isUp ? 'trending_up' : 'trending_down'} size={13} />
+      {isUp ? '+' : ''}
+      {change}% dari kemarin
+    </span>
+  )
+}
+
 // Format Date -> 'YYYY-MM-DD' pakai komponen tanggal LOKAL (bukan UTC).
 // Backend revenue-chart mengembalikan entry.date dalam tanggal lokal, jadi
 // kalau kita bandingkan pakai now.toISOString() (yang UTC), antara jam
@@ -287,8 +303,9 @@ setStatusCounts(counts)
               <div>
                 <span className="text-label-sm text-on-surface-variant font-bold">Pesanan Hari Ini</span>
                 <h3 className="text-3xl font-extrabold text-on-surface font-sans mt-0.5">
-                  {loading ? '—' : stats?.todayOrders ?? 0}
+                  {loading ? '—' : stats?.totalOrders?.value ?? 0}
                 </h3>
+                {!loading && <ChangeBadge change={stats?.totalOrders?.change} />}
               </div>
             </div>
 
@@ -299,8 +316,9 @@ setStatusCounts(counts)
               <div>
                 <span className="text-label-sm text-on-surface-variant font-bold">Siap Diambil</span>
                 <h3 className="text-3xl font-extrabold text-on-surface font-sans mt-0.5">
-                  {loading ? '—' : stats?.readyForPickup ?? 0}
+                  {loading ? '—' : stats?.readyForPickup?.value ?? 0}
                 </h3>
+                {!loading && <ChangeBadge change={stats?.readyForPickup?.change} />}
               </div>
             </div>
 
@@ -311,8 +329,9 @@ setStatusCounts(counts)
               <div>
                 <span className="text-label-sm text-on-surface-variant font-bold">Sedang Diproses</span>
                 <h3 className="text-3xl font-extrabold text-on-surface font-sans mt-0.5">
-                  {loading ? '—' : stats?.inProgress ?? 0}
+                  {loading ? '—' : stats?.inProgress?.value ?? 0}
                 </h3>
+                {!loading && <ChangeBadge change={stats?.inProgress?.change} />}
               </div>
             </div>
 
