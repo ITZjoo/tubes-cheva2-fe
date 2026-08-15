@@ -8,7 +8,9 @@ import Sidebar from '../../../components/ui/Sidebar'
 import ProfilePhotoCard from '../components/ProfilePhotoCard'
 import PasswordFormCard from '../components/PasswordFormCard'
 import { useAuth } from '../../../context/AuthContext'
-import * as settingsService from '../services/settingsService'
+import { updateProfile, changePassword } from '../services/settingsService'
+import { uploadFile } from '../../../services/uploadService'
+import { getAssetUrl } from '../../../services/api'
 
 // TODO: sesuaikan kalau id menu Sidebar ternyata beda path-nya di AppRoutes
 const SIDEBAR_ROUTES = {
@@ -27,27 +29,26 @@ export default function EditProfilAkunView() {
   const [username, setUsername] = useState('')
   const [phone, setPhone] = useState('')
   const [photoUrl, setPhotoUrl] = useState(null)
+  const [profileError, setProfileError] = useState('')
+  const [profileSuccess, setProfileSuccess] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
-  const [profileError, setProfileError] = useState(null)
-  const [profileSaved, setProfileSaved] = useState(false)
 
-  // Prefill from the logged-in user once AuthContext's GET /me resolves.
   useEffect(() => {
     if (user) {
-      setUsername(user.name ?? '')
-      setPhone(user.phone ?? '')
+      setUsername(user.name || '')
+      setPhone(user.phone || '')
+      setPhotoUrl(getAssetUrl(user.photoUrl))
     }
   }, [user])
 
   async function handleSaveProfile() {
-    if (!user) return
-    setProfileError(null)
-    setProfileSaved(false)
+    setProfileError('')
+    setProfileSuccess('')
     setSavingProfile(true)
     try {
-      await settingsService.updateAccount(user.id, { name: username, phone })
-      updateUser({ name: username, phone })
-      setProfileSaved(true)
+      const updated = await updateProfile({ name: username, phone })
+      updateUser(updated || { name: username, phone })
+      setProfileSuccess('Profil berhasil disimpan')
     } catch (err) {
       setProfileError(err.message || 'Gagal menyimpan profil')
     } finally {
@@ -55,13 +56,22 @@ export default function EditProfilAkunView() {
     }
   }
 
-  async function handleUpdatePassword({ newPassword }) {
-    if (!user) return
-    await settingsService.updateAccount(user.id, { password: newPassword })
+  async function handleUpdatePassword({ oldPassword, newPassword }) {
+    await changePassword({ oldPassword, newPassword })
   }
 
-  function handlePhotoChange(file) {
-    setPhotoUrl(URL.createObjectURL(file))
+  async function handlePhotoChange(file) {
+    const previousUrl = photoUrl
+    setPhotoUrl(URL.createObjectURL(file)) // instant preview while it uploads
+    try {
+      const uploadedUrl = await uploadFile(file)
+      const updated = await updateProfile({ photoUrl: uploadedUrl })
+      updateUser(updated || { photoUrl: uploadedUrl })
+      setPhotoUrl(getAssetUrl(uploadedUrl))
+    } catch (err) {
+      setPhotoUrl(previousUrl)
+      setProfileError(err.message || 'Gagal mengunggah foto profil')
+    }
   }
 
   function handleSidebarItemClick(item) {
@@ -99,7 +109,7 @@ export default function EditProfilAkunView() {
                   value={username}
                   onChange={(e) => {
                     setUsername(e.target.value)
-                    setProfileSaved(false)
+                    setProfileSuccess('')
                   }}
                   className="!h-9 !w-full !max-w-[411px] !gap-2.5 !rounded-lg !border !border-[#89D0ED] !bg-[#B9EAFF4D] !px-[15px] !py-[5px]"
                 />
@@ -108,19 +118,26 @@ export default function EditProfilAkunView() {
                   value={phone}
                   onChange={(e) => {
                     setPhone(e.target.value)
-                    setProfileSaved(false)
+                    setProfileSuccess('')
                   }}
                   className="!h-9 !w-full !max-w-[411px] !gap-2.5 !rounded-lg !border !border-[#89D0ED] !bg-[#B9EAFF4D] !px-[15px] !py-[5px]"
                 />
-
-                {profileError && <p className="text-body-sm font-semibold text-error">{profileError}</p>}
-                {profileSaved && <p className="text-body-sm font-semibold text-success">Profil berhasil disimpan.</p>}
+                {profileError && (
+                  <Typography variant="body-sm" className="!text-[12px] text-error">
+                    {profileError}
+                  </Typography>
+                )}
+                {profileSuccess && (
+                  <Typography variant="body-sm" className="!text-[12px] text-primary">
+                    {profileSuccess}
+                  </Typography>
+                )}
 
                 <Button
                   variant="primary"
                   appearance="solid"
                   onClick={handleSaveProfile}
-                  disabled={savingProfile || !user}
+                  disabled={savingProfile}
                   className="w-fit self-end !text-[12px]"
                 >
                   {savingProfile ? 'Menyimpan...' : 'Simpan Profil'}

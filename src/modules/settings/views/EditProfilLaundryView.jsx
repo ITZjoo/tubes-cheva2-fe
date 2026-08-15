@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../../../components/ui/Icon'
 import Input from '../../../components/ui/Input'
@@ -6,6 +6,7 @@ import Typography from '../../../components/ui/Typography'
 import Button from '../../../components/ui/Button'
 import Sidebar from '../../../components/ui/Sidebar'
 import Divider from '../../../components/ui/Divider'
+import { getLaundryProfile, updateLaundryProfile } from '../services/laundryProfileService'
 
 // TODO: sesuaikan kalau id menu Sidebar ternyata beda path-nya di AppRoutes
 const SIDEBAR_ROUTES = {
@@ -96,15 +97,60 @@ export default function EditProfilLaundryView() {
   const [whatsapp, setWhatsapp] = useState('')
   const [email, setEmail] = useState('')
   const [tautan, setTautan] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [feedback, setFeedback] = useState({ type: null, message: '' })
 
   const wordCount = informasi.trim().length === 0 ? 0 : informasi.trim().split(/\s+/).length
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const profile = await getLaundryProfile()
+        if (!profile) return
+        setNamaLaundry(profile.name ?? 'Utama Laundry')
+        setAlamat(profile.address ?? '')
+        setInformasi(profile.info ?? '')
+        setSelectedDays(profile.operationalDays?.length ? profile.operationalDays : DAYS.map((d) => d.key))
+        setJamBuka(profile.openTime ?? '08:00')
+        setJamTutup(profile.closeTime ?? '22:00')
+        setWhatsapp(profile.whatsapp ?? '')
+        setEmail(profile.email ?? '')
+        setTautan(profile.links ?? '')
+      } catch (err) {
+        console.error('Gagal memuat profil laundry', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadProfile()
+  }, [])
 
   function toggleDay(key) {
     setSelectedDays((prev) => (prev.includes(key) ? prev.filter((d) => d !== key) : [...prev, key]))
   }
 
-  function handleSave() {
-    // TODO: hook up to API — save profil laundry, jam operasional, dan kontak
+  async function handleSave() {
+    setSaving(true)
+    setFeedback({ type: null, message: '' })
+    try {
+      await updateLaundryProfile({
+        name: namaLaundry,
+        address: alamat,
+        info: informasi,
+        operationalDays: selectedDays,
+        openTime: jamBuka,
+        closeTime: jamTutup,
+        whatsapp,
+        email,
+        links: tautan,
+      })
+      setFeedback({ type: 'success', message: 'Profil laundry berhasil disimpan' })
+    } catch (err) {
+      setFeedback({ type: 'error', message: err.message || 'Gagal menyimpan profil laundry' })
+    } finally {
+      setSaving(false)
+    }
   }
 
   function handleSidebarItemClick(item) {
@@ -248,14 +294,23 @@ export default function EditProfilLaundryView() {
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex items-center justify-end gap-4">
+            {feedback.message && (
+              <Typography
+                variant="body-sm"
+                className={`!text-[12px] ${feedback.type === 'error' ? 'text-error' : 'text-primary'}`}
+              >
+                {feedback.message}
+              </Typography>
+            )}
             <Button
               variant="primary"
               appearance="solid"
               onClick={handleSave}
+              disabled={loading || saving}
               className="!h-12 !rounded-lg !px-[25px] !py-2.5 !text-[14px]"
             >
-              Simpan
+              {saving ? 'Menyimpan...' : 'Simpan'}
             </Button>
           </div>
         </div>

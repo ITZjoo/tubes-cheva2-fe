@@ -14,6 +14,18 @@ export function setStoredToken(token) {
   }
 }
 
+// Uploaded files (QRIS image, profile photo, ...) come back as paths like
+// "/uploads/xyz.jpg", served from the API's origin — NOT under the "/api"
+// prefix used for JSON endpoints. Resolve them against that origin here so
+// callers can just do <img src={getAssetUrl(profile.photoUrl)} />.
+export function getAssetUrl(path) {
+  if (!path) return null
+  if (/^https?:\/\//.test(path)) return path
+  const base = import.meta.env.VITE_API_BASE_URL || ''
+  const origin = base.replace(/\/api\/?$/, '')
+  return `${origin}${path}`
+}
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
 })
