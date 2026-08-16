@@ -295,7 +295,7 @@ export default function PendapatanView() {
         ))}
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
         <div className="lg:col-span-2">
           <RevenueChart
             data={chartData}
@@ -308,8 +308,8 @@ export default function PendapatanView() {
           />
         </div>
 
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4 min-h-[500px]">
-          <div className="flex items-center gap-2">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-5 h-[700px]">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="relative flex-1">
               <input
                 type="text"
@@ -329,15 +329,15 @@ export default function PendapatanView() {
           </div>
 
           {loading ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3 py-12">
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 py-12">
               <span className="w-10 h-10 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></span>
               <p className="text-body-md text-on-surface-variant/70 font-semibold">Memuat transaksi...</p>
             </div>
           ) : filteredEntries.length > 0 ? (
-            <div className="flex-1 flex flex-col gap-4 divide-y divide-outline-variant/25 overflow-y-auto custom-scrollbar">
+            <div className="flex-1 min-h-0 flex flex-col gap-5 divide-y divide-outline-variant/25 overflow-y-auto custom-scrollbar pr-1">
               {filteredEntries.map((entry) =>
                 entry.type === 'INCOME' ? (
-                  <div key={`tx-${entry.data.id}`} className="pt-4 first:pt-0 flex flex-col gap-1.5">
+                  <div key={`tx-${entry.data.id}`} className="pt-5 first:pt-0 flex flex-col gap-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex flex-col">
                         <span className="text-label-md font-mono font-extrabold text-on-surface">
@@ -370,7 +370,7 @@ export default function PendapatanView() {
                     </div>
                   </div>
                 ) : (
-                  <div key={`exp-${entry.data.id}`} className="pt-4 first:pt-0 flex flex-col gap-1.5">
+                  <div key={`exp-${entry.data.id}`} className="pt-5 first:pt-0 flex flex-col gap-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex flex-col">
                         <span className="text-label-md font-mono font-extrabold text-on-surface">
@@ -407,7 +407,7 @@ export default function PendapatanView() {
               )}
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-8">
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center gap-3 py-8">
               <img
                 src={emptyTransactionsIllustration}
                 alt="Belum ada transaksi"
