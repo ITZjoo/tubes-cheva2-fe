@@ -1,13 +1,11 @@
-// The backend's OrderStatus enum has 10 steps (it splits out PICKUP before
-// WASHING and PACKING before READY); the FE's Stepper/EditStatusDrawer only
-// model 8. These maps bridge the two without changing either side's contract.
+// Corrected against the backend's actual ORDER_STATUS enum
+// (src/utils/constants.js on tubes-cheva2-be) — it only has 8 values, no
+// separate PICKUP or PACKING steps. FE's 8 status keys map 1:1 to it.
 export const BE_CHAIN = [
   'PENDING',
-  'PICKUP',
   'WASHING',
   'DRYING',
   'IRONING',
-  'PACKING',
   'READY',
   'DELIVERED',
   'COMPLETED',
@@ -24,15 +22,11 @@ export const FE_TO_BE = {
   dibatalkan: 'CANCELLED',
 }
 
-// PICKUP has no FE step of its own (still "belum dicuci") and PACKING is
-// folded into "siap_diambil" (closest visible FE step).
 export const BE_TO_FE = {
   PENDING: 'menunggu',
-  PICKUP: 'menunggu',
   WASHING: 'dicuci',
   DRYING: 'dikeringkan',
   IRONING: 'disetrika',
-  PACKING: 'siap_diambil',
   READY: 'siap_diambil',
   DELIVERED: 'diantar',
   COMPLETED: 'selesai',
@@ -40,9 +34,9 @@ export const BE_TO_FE = {
 }
 
 // The backend only allows one forward step at a time (or a branch to
-// CANCELLED up through READY). The FE lets staff click any step ahead in
-// EditStatusDrawer, so to reach a target we walk every intermediate BE
-// status in between and issue one PATCH per hop.
+// CANCELLED up through READY, per ORDER_TRANSITIONS). The FE lets staff
+// click any step ahead in EditStatusDrawer, so to reach a target we walk
+// every intermediate BE status in between and issue one PATCH per hop.
 export function getStatusHops(currentBeStatus, targetFeStatus) {
   const targetBeStatus = FE_TO_BE[targetFeStatus]
   if (!targetBeStatus) return []
